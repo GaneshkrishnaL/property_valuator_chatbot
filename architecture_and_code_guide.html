@@ -1,0 +1,962 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RAG Property Valuation Chatbot - Architecture & Code Guide</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #0f172a; color: #e2e8f0; line-height: 1.7;
+    padding: 0;
+  }
+  .hero {
+    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+    border-bottom: 2px solid #3b82f6;
+    padding: 60px 40px; text-align: center;
+  }
+  .hero h1 { font-size: 2.2em; color: #f8fafc; margin-bottom: 8px; }
+  .hero p { color: #94a3b8; font-size: 1.1em; max-width: 700px; margin: 0 auto; }
+  .container { max-width: 1100px; margin: 0 auto; padding: 40px 30px; }
+
+  /* Big Picture Section */
+  .big-picture {
+    background: #1e293b; border-radius: 12px; padding: 32px;
+    border: 1px solid #334155; margin-bottom: 40px;
+  }
+  .big-picture h2 { color: #60a5fa; font-size: 1.5em; margin-bottom: 16px; }
+  .big-picture p { color: #cbd5e1; margin-bottom: 14px; }
+  .analogy {
+    background: #0f172a; border-left: 4px solid #22c55e;
+    padding: 16px 20px; border-radius: 0 8px 8px 0; margin: 20px 0;
+  }
+  .analogy strong { color: #22c55e; }
+
+  /* Flow Diagram */
+  .flow-section { margin-bottom: 50px; }
+  .flow-section h2 {
+    color: #f8fafc; font-size: 1.6em; margin-bottom: 6px;
+    border-bottom: 2px solid #3b82f6; padding-bottom: 8px; display: inline-block;
+  }
+  .flow-section .subtitle { color: #94a3b8; margin-bottom: 24px; font-size: 0.95em; }
+  .flow {
+    display: flex; align-items: center; flex-wrap: wrap;
+    gap: 0; margin: 20px 0; justify-content: center;
+  }
+  .flow-box {
+    background: #1e293b; border: 2px solid #334155; border-radius: 10px;
+    padding: 14px 18px; text-align: center; min-width: 140px;
+    transition: border-color 0.2s;
+  }
+  .flow-box:hover { border-color: #3b82f6; }
+  .flow-box .label { font-weight: 700; font-size: 0.95em; color: #f8fafc; }
+  .flow-box .file { font-family: monospace; font-size: 0.78em; color: #60a5fa; margin-top: 4px; }
+  .flow-box .desc { font-size: 0.78em; color: #94a3b8; margin-top: 4px; }
+  .flow-arrow {
+    font-size: 1.6em; color: #3b82f6; margin: 0 6px; font-weight: bold;
+  }
+  .flow-box.green { border-color: #22c55e; }
+  .flow-box.blue { border-color: #3b82f6; }
+  .flow-box.purple { border-color: #a855f7; }
+  .flow-box.orange { border-color: #f97316; }
+  .flow-box.pink { border-color: #ec4899; }
+  .flow-box.yellow { border-color: #eab308; }
+
+  /* File Sections */
+  .file-section {
+    background: #1e293b; border-radius: 12px; padding: 28px 32px;
+    border: 1px solid #334155; margin-bottom: 24px;
+    transition: border-color 0.2s;
+  }
+  .file-section:hover { border-color: #475569; }
+  .file-header {
+    display: flex; align-items: center; gap: 14px; margin-bottom: 16px;
+    flex-wrap: wrap;
+  }
+  .file-header h3 { font-size: 1.25em; color: #f8fafc; }
+  .file-header code {
+    background: #0f172a; padding: 4px 10px; border-radius: 6px;
+    font-size: 0.85em; color: #60a5fa; border: 1px solid #334155;
+  }
+  .phase-badge {
+    font-size: 0.72em; font-weight: 700; text-transform: uppercase;
+    padding: 3px 10px; border-radius: 20px; letter-spacing: 0.5px;
+  }
+  .phase-data { background: #22c55e22; color: #22c55e; }
+  .phase-pipeline { background: #3b82f622; color: #60a5fa; }
+  .phase-retrieval { background: #a855f722; color: #a855f7; }
+  .phase-chatbot { background: #f9731622; color: #f97316; }
+  .phase-demo { background: #ec489922; color: #ec4899; }
+  .phase-entry { background: #eab30822; color: #eab308; }
+
+  .what-it-does, .how-it-works, .why-built, .key-example, .interview-tip {
+    margin-bottom: 16px;
+  }
+  .section-label {
+    font-size: 0.82em; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.5px; margin-bottom: 6px;
+  }
+  .label-what { color: #22c55e; }
+  .label-how { color: #60a5fa; }
+  .label-why { color: #f97316; }
+  .label-example { color: #a855f7; }
+  .label-tip { color: #ec4899; }
+
+  .section-content { color: #cbd5e1; font-size: 0.93em; }
+  .section-content p { margin-bottom: 10px; }
+
+  pre {
+    background: #0f172a; border: 1px solid #334155; border-radius: 8px;
+    padding: 14px 18px; overflow-x: auto; font-size: 0.85em;
+    color: #e2e8f0; margin: 10px 0; line-height: 1.5;
+  }
+  pre .comment { color: #64748b; }
+  pre .keyword { color: #c084fc; }
+  pre .string { color: #86efac; }
+  pre .func { color: #60a5fa; }
+
+  .callout {
+    background: #0f172a; border-left: 4px solid #f97316;
+    padding: 14px 18px; border-radius: 0 8px 8px 0; margin: 14px 0;
+    font-size: 0.9em;
+  }
+  .callout.tip { border-left-color: #ec4899; }
+  .callout.green { border-left-color: #22c55e; }
+
+  .divider { border: none; border-top: 1px solid #334155; margin: 40px 0; }
+
+  /* Summary Table */
+  table {
+    width: 100%; border-collapse: collapse; margin: 16px 0;
+    font-size: 0.9em;
+  }
+  th { background: #0f172a; color: #60a5fa; text-align: left; padding: 10px 14px; border-bottom: 2px solid #334155; }
+  td { padding: 10px 14px; border-bottom: 1px solid #1e293b; color: #cbd5e1; }
+  tr:hover td { background: #1e293b44; }
+
+  @media (max-width: 700px) {
+    .container { padding: 20px 14px; }
+    .file-section { padding: 18px; }
+    .flow { flex-direction: column; }
+    .flow-arrow { transform: rotate(90deg); }
+  }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <h1>RAG Property Valuation Chatbot</h1>
+  <p>Complete Architecture & Code Guide for your Google Cloud CE Interview</p>
+</div>
+
+<div class="container">
+
+<!-- ========== BIG PICTURE ========== -->
+<div class="big-picture">
+  <h2>The Big Picture - What This Project Actually Does</h2>
+  <p>Imagine a large real estate company that has thousands of PDF documents: appraisal reports, property listings, market analyses, comparable sales reports. All their valuable data is <strong style="color:#f97316">trapped inside these PDFs</strong> in messy formats that tools like ChatGPT or LangChain can't properly understand.</p>
+  <p>This project builds a <strong style="color:#60a5fa">custom RAG (Retrieval-Augmented Generation) pipeline</strong> that solves this problem in two main phases:</p>
+
+  <div class="analogy">
+    <strong>Think of it like a library system:</strong><br><br>
+    <strong>Phase 1 - INGESTION</strong> (run once): A librarian reads every PDF, understands what type of document it is, extracts the important information, organizes it into neat index cards, and files them in a searchable cabinet.<br><br>
+    <strong>Phase 2 - QUERY</strong> (run every time a user asks): When someone asks "What's the value of 742 Evergreen Terrace?", the librarian searches the cabinet, pulls out the most relevant cards, and writes a well-sourced answer using only what's on those cards (no making stuff up).
+  </div>
+</div>
+
+<!-- ========== INGESTION FLOW ========== -->
+<div class="flow-section">
+  <h2>Phase 1: Ingestion Pipeline</h2>
+  <p class="subtitle">This runs once via <code>python ingest.py</code> to process all PDFs and store them for searching.</p>
+
+  <div class="flow">
+    <div class="flow-box green">
+      <div class="label">Generate PDFs</div>
+      <div class="file">generate_sample_pdfs.py</div>
+      <div class="desc">Creates 11 sample PDFs</div>
+    </div>
+    <div class="flow-arrow">&rarr;</div>
+    <div class="flow-box blue">
+      <div class="label">Extract</div>
+      <div class="file">pdf_extractor.py</div>
+      <div class="desc">Text + tables from PDF</div>
+    </div>
+    <div class="flow-arrow">&rarr;</div>
+    <div class="flow-box blue">
+      <div class="label">Classify</div>
+      <div class="file">document_classifier.py</div>
+      <div class="desc">What type of doc?</div>
+    </div>
+    <div class="flow-arrow">&rarr;</div>
+    <div class="flow-box blue">
+      <div class="label">Parse</div>
+      <div class="file">custom_parsers.py</div>
+      <div class="desc">Extract structured fields</div>
+    </div>
+    <div class="flow-arrow">&rarr;</div>
+    <div class="flow-box purple">
+      <div class="label">Chunk</div>
+      <div class="file">chunker.py</div>
+      <div class="desc">Split into searchable pieces</div>
+    </div>
+    <div class="flow-arrow">&rarr;</div>
+    <div class="flow-box purple">
+      <div class="label">Embed</div>
+      <div class="file">embeddings.py</div>
+      <div class="desc">Convert to vectors</div>
+    </div>
+    <div class="flow-arrow">&rarr;</div>
+    <div class="flow-box purple">
+      <div class="label">Store</div>
+      <div class="file">vector_store.py</div>
+      <div class="desc">Save to ChromaDB</div>
+    </div>
+  </div>
+</div>
+
+<!-- ========== QUERY FLOW ========== -->
+<div class="flow-section">
+  <h2>Phase 2: Query Flow</h2>
+  <p class="subtitle">This runs every time a user asks a question, via <code>python demo.py</code> or the Streamlit UI.</p>
+
+  <div class="flow">
+    <div class="flow-box yellow">
+      <div class="label">User Query</div>
+      <div class="desc">"What's 742 Evergreen worth?"</div>
+    </div>
+    <div class="flow-arrow">&rarr;</div>
+    <div class="flow-box purple">
+      <div class="label">Hybrid Search</div>
+      <div class="file">search.py</div>
+      <div class="desc">Filters + vectors + rerank</div>
+    </div>
+    <div class="flow-arrow">&rarr;</div>
+    <div class="flow-box orange">
+      <div class="label">Build Prompt</div>
+      <div class="file">prompt_templates.py</div>
+      <div class="desc">Pick template + inject docs</div>
+    </div>
+    <div class="flow-arrow">&rarr;</div>
+    <div class="flow-box orange">
+      <div class="label">LLM Call</div>
+      <div class="file">llm_client.py</div>
+      <div class="desc">GPT-4o-mini generates answer</div>
+    </div>
+    <div class="flow-arrow">&rarr;</div>
+    <div class="flow-box orange">
+      <div class="label">Verify</div>
+      <div class="file">chatbot.py</div>
+      <div class="desc">Check numbers + sources</div>
+    </div>
+    <div class="flow-arrow">&rarr;</div>
+    <div class="flow-box pink">
+      <div class="label">Display</div>
+      <div class="file">cli_demo.py / streamlit</div>
+      <div class="desc">Show to user</div>
+    </div>
+  </div>
+</div>
+
+<hr class="divider">
+
+<!-- ========== PROJECT STRUCTURE ========== -->
+<div class="big-picture">
+  <h2>Project Structure at a Glance</h2>
+  <table>
+    <tr><th>File</th><th>Phase</th><th>One-line Purpose</th></tr>
+    <tr><td><code>config.py</code></td><td>Config</td><td>All settings in one place (GCP flags, model names, thresholds)</td></tr>
+    <tr><td><code>data/generate_sample_pdfs.py</code></td><td>Data</td><td>Creates 11 fake-but-realistic real estate PDFs</td></tr>
+    <tr><td><code>pipeline/pdf_extractor.py</code></td><td>Pipeline</td><td>Opens PDFs, pulls out text + table structures</td></tr>
+    <tr><td><code>pipeline/document_classifier.py</code></td><td>Pipeline</td><td>Figures out if a PDF is an appraisal, listing, etc.</td></tr>
+    <tr><td><code>pipeline/custom_parsers.py</code></td><td>Pipeline</td><td>Extracts structured data (price, beds, address) per doc type</td></tr>
+    <tr><td><code>pipeline/chunker.py</code></td><td>Pipeline</td><td>Splits documents into searchable chunks with metadata</td></tr>
+    <tr><td><code>retrieval/embeddings.py</code></td><td>Retrieval</td><td>Converts text chunks into number vectors for similarity search</td></tr>
+    <tr><td><code>retrieval/vector_store.py</code></td><td>Retrieval</td><td>ChromaDB wrapper for storing and querying vectors</td></tr>
+    <tr><td><code>retrieval/search.py</code></td><td>Retrieval</td><td>Hybrid search: metadata filters + vector similarity + reranking</td></tr>
+    <tr><td><code>chatbot/llm_client.py</code></td><td>Chatbot</td><td>Talks to OpenAI GPT-4o-mini (or Gemini in production)</td></tr>
+    <tr><td><code>chatbot/prompt_templates.py</code></td><td>Chatbot</td><td>Query-specific prompt templates with hallucination guards</td></tr>
+    <tr><td><code>chatbot/chatbot.py</code></td><td>Chatbot</td><td>Main orchestrator that ties search + LLM + verification together</td></tr>
+    <tr><td><code>demo/cli_demo.py</code></td><td>Demo</td><td>Beautiful terminal UI with Rich library</td></tr>
+    <tr><td><code>demo/streamlit_app.py</code></td><td>Demo</td><td>Web-based chat interface with Streamlit</td></tr>
+    <tr><td><code>ingest.py</code></td><td>Entry</td><td>Runs the full ingestion pipeline (Phase 1)</td></tr>
+    <tr><td><code>demo.py</code></td><td>Entry</td><td>Runs 5 demo queries or interactive mode (Phase 2)</td></tr>
+    <tr><td><code>query.py</code></td><td>Entry</td><td>Single query from command line</td></tr>
+  </table>
+</div>
+
+<hr class="divider">
+
+<!-- ========== DETAILED FILE EXPLANATIONS ========== -->
+
+<!-- config.py -->
+<div class="file-section">
+  <div class="file-header">
+    <span class="phase-badge phase-entry">Config</span>
+    <h3>Central Configuration</h3>
+    <code>config.py</code>
+  </div>
+
+  <div class="what-it-does">
+    <div class="section-label label-what">WHAT IT DOES</div>
+    <div class="section-content">
+      <p>This is the brain's settings panel. Every tunable value in the entire project lives here. Instead of hardcoding numbers like "search for top 10 results" scattered across 15 files, they're all centralized so you can tweak behavior from one place.</p>
+    </div>
+  </div>
+
+  <div class="how-it-works">
+    <div class="section-label label-how">KEY SETTINGS</div>
+    <div class="section-content">
+      <p><strong>Backend flags:</strong> <code>USE_VERTEX_AI</code> and <code>USE_GEMINI</code> control whether you use local models (for demo) or Google Cloud (for production). Flip these to True and the entire system switches to GCP services.</p>
+      <p><strong>Retrieval tuning:</strong> <code>CHUNK_SIZE=800</code> (how big each text chunk is), <code>CHUNK_OVERLAP=100</code> (overlap between chunks so you don't cut sentences), <code>TOP_K=10</code> (how many results to fetch), <code>SIMILARITY_THRESHOLD=0.3</code> (minimum relevance score).</p>
+      <p><strong>ChromaDB path:</strong> Configurable via environment variable so it works on different machines without disk errors.</p>
+    </div>
+  </div>
+
+  <pre># The two flags that switch between demo and production
+USE_VERTEX_AI = False   <span class="comment"># True = use Google Vertex AI embeddings</span>
+USE_GEMINI = False      <span class="comment"># True = use Gemini Pro instead of OpenAI</span>
+
+<span class="comment"># Retrieval tuning - these control search quality</span>
+TOP_K = 10              <span class="comment"># Fetch top 10 most relevant chunks</span>
+SIMILARITY_THRESHOLD = 0.3  <span class="comment"># Ignore results below 30% relevance</span></pre>
+
+  <div class="callout tip">
+    <strong>Interview tip:</strong> When the interviewer asks "How would you move this to production?", you say "I flip USE_VERTEX_AI and USE_GEMINI to True in config.py, set the GCP project ID, and the entire system switches from local models to Vertex AI embeddings and Gemini Pro. Zero code changes needed."
+  </div>
+</div>
+
+<!-- generate_sample_pdfs.py -->
+<div class="file-section">
+  <div class="file-header">
+    <span class="phase-badge phase-data">Data</span>
+    <h3>PDF Generator</h3>
+    <code>data/generate_sample_pdfs.py</code>
+  </div>
+
+  <div class="what-it-does">
+    <div class="section-label label-what">WHAT IT DOES</div>
+    <div class="section-content">
+      <p>Creates 11 realistic real estate PDF documents from scratch. Think of it as the "fake data factory" that simulates what a real estate company's document storage would look like.</p>
+    </div>
+  </div>
+
+  <div class="how-it-works">
+    <div class="section-label label-how">HOW IT WORKS</div>
+    <div class="section-content">
+      <p>It generates 4 types of documents, each with different structures:</p>
+      <p><strong>3 Appraisal Reports</strong> - Official valuation documents with narrative text mixed with tables. These have sections like "Property Description", "Neighborhood Analysis", "Comparable Sales", and "Valuation Conclusion" with a stated estimated market value.</p>
+      <p><strong>6 Listing Sheets</strong> - MLS-style property listings with feature tables, agent remarks, and pricing info. Each property has address, beds, baths, sqft, price, and neighborhood.</p>
+      <p><strong>1 Market Analysis</strong> - Neighborhood-level statistics with tables showing average prices, days on market, and year-over-year trends across 5 Austin neighborhoods.</p>
+      <p><strong>1 Comparable Sales Report</strong> - A big table of 12 recent sales with addresses, prices, dates, and price-per-sqft.</p>
+    </div>
+  </div>
+
+  <div class="why-built">
+    <div class="section-label label-why">WHY IT'S BUILT THIS WAY</div>
+    <div class="section-content">
+      <p>The PDFs are intentionally messy. Tables with tight columns, headers and footers that look like real content, narrative paragraphs mixed with dollar amounts. This is the whole point of the demo, showing the interviewer that standard tools like LangChain's PyPDFLoader would just dump everything as flat text and lose all the table structure. Your custom pipeline handles this mess properly.</p>
+    </div>
+  </div>
+
+  <pre><span class="comment"># Example property data that gets turned into PDFs</span>
+PROPERTIES = [
+    {
+        "address": "742 Evergreen Terrace, Austin, TX",
+        "neighborhood": "South Congress",
+        "bedrooms": 4, "bathrooms": 3,
+        "sqft": 2850, "price": 575000,
+        "year_built": 2018,
+    },
+    <span class="comment"># ... 5 more properties including the Downtown Austin one we added</span>
+]</pre>
+</div>
+
+<!-- pdf_extractor.py -->
+<div class="file-section">
+  <div class="file-header">
+    <span class="phase-badge phase-pipeline">Pipeline</span>
+    <h3>PDF Extractor</h3>
+    <code>pipeline/pdf_extractor.py</code>
+  </div>
+
+  <div class="what-it-does">
+    <div class="section-label label-what">WHAT IT DOES</div>
+    <div class="section-content">
+      <p>This is Step 1 of the pipeline. It opens each PDF file and pulls out two separate things: the raw text AND any tables it finds. Most tools just give you flat text. This one preserves the difference between "a paragraph of description" and "a table of comparable sales data".</p>
+    </div>
+  </div>
+
+  <div class="how-it-works">
+    <div class="section-label label-how">HOW IT WORKS - STEP BY STEP</div>
+    <div class="section-content">
+      <p><strong>Step 1:</strong> Opens the PDF using PyMuPDF (imported as <code>fitz</code>). This library can read any PDF, even ones with complex layouts.</p>
+      <p><strong>Step 2:</strong> For each page, extracts the raw text using <code>page.get_text()</code>.</p>
+      <p><strong>Step 3:</strong> Filters out headers and footers. Lines containing "CONFIDENTIAL", "Page X |", or "Generated on" are removed so they don't pollute your embeddings later. Without this, every single chunk would have "CONFIDENTIAL" in it, confusing the search.</p>
+      <p><strong>Step 4:</strong> Detects and extracts tables using PyMuPDF's built-in table finder. Each table becomes a list of rows, where each row is a list of cell values. So a 3-column, 5-row comparable sales table becomes a Python list of 5 lists, each with 3 values.</p>
+      <p><strong>Step 5:</strong> Returns an <code>ExtractedDocument</code> object containing pages (each with text + tables), the full concatenated text, and metadata like filename and page count.</p>
+    </div>
+  </div>
+
+  <pre><span class="comment"># What the output looks like conceptually:</span>
+ExtractedDocument(
+    pages=[
+        ExtractedPage(
+            text="Property at 742 Evergreen Terrace is a 4-bed...",
+            tables=[
+                [["Address", "Price", "Sqft"],       <span class="comment"># header row</span>
+                 ["750 Elm St", "$535,000", "2,380"],  <span class="comment"># data rows</span>
+                 ["801 Oak Ave", "$612,000", "3,100"]]
+            ]
+        )
+    ],
+    full_text="Property at 742 Evergreen...",
+    metadata={"filename": "appraisal_742_evergreen.pdf", "pages": 3}
+)</pre>
+
+  <div class="callout green">
+    <strong>Production upgrade:</strong> The file contains commented-out code showing how to swap PyMuPDF for Google Document AI. Document AI adds OCR for scanned documents, ML-based table extraction, and entity detection.
+  </div>
+</div>
+
+<!-- document_classifier.py -->
+<div class="file-section">
+  <div class="file-header">
+    <span class="phase-badge phase-pipeline">Pipeline</span>
+    <h3>Document Classifier</h3>
+    <code>pipeline/document_classifier.py</code>
+  </div>
+
+  <div class="what-it-does">
+    <div class="section-label label-what">WHAT IT DOES</div>
+    <div class="section-content">
+      <p>After extraction, we need to figure out WHAT TYPE of document we're looking at, because each type needs a different parser. An appraisal has "assessed value" and "comparable sales table" while a listing has "MLS#" and "days on market".</p>
+    </div>
+  </div>
+
+  <div class="how-it-works">
+    <div class="section-label label-how">HOW IT WORKS</div>
+    <div class="section-content">
+      <p>Think of it like a scoring game. For each document type, there's a set of "signal" patterns, each with a weight:</p>
+      <p>For <strong>APPRAISAL</strong>: if the text contains "appraisal report" (worth 0.35 points), "appraiser" (0.20), "assessed value" (0.15), etc.</p>
+      <p>For <strong>LISTING</strong>: "property listing" (0.30), "MLS#" (0.25), "list price" (0.20), etc.</p>
+      <p>For <strong>MARKET_ANALYSIS</strong>: "market analysis" (0.35), "year-over-year" (0.15), etc.</p>
+      <p>For <strong>COMPARABLE_SALES</strong>: "comparable sales report" (0.35), "$/sq ft" (0.15), etc.</p>
+      <p>It also adds structural bonuses. A document with 2+ pages is more likely an appraisal. Lots of tables? Probably comparable sales. The type with the highest total score wins.</p>
+    </div>
+  </div>
+
+  <pre><span class="comment"># Example: classifying a document</span>
+result = classify_document(extracted_text)
+
+<span class="comment"># result might be:</span>
+ClassificationResult(
+    document_type=DocumentType.APPRAISAL,
+    confidence=0.87,
+    reasoning="Strong appraisal signals: 'appraisal report' (0.35), 'appraiser' (0.20)..."
+)</pre>
+
+  <div class="callout">
+    <strong>Why this matters:</strong> Classification determines which PARSER handles the document next. Without it, you'd need one giant parser that handles every document type. That would be fragile and miss type-specific fields.
+  </div>
+</div>
+
+<!-- custom_parsers.py -->
+<div class="file-section">
+  <div class="file-header">
+    <span class="phase-badge phase-pipeline">Pipeline</span>
+    <h3>Custom Parsers - THE CORE OF THE PROJECT</h3>
+    <code>pipeline/custom_parsers.py</code>
+  </div>
+
+  <div class="what-it-does">
+    <div class="section-label label-what">WHAT IT DOES</div>
+    <div class="section-content">
+      <p>This is the most important file in the entire project. It's the reason the prototype exists. It solves the core problem: "proprietary data trapped in unstructured PDFs."</p>
+      <p>There are 4 parser classes, one for each document type. Each parser knows exactly what fields to look for and how to extract them from that specific document format.</p>
+    </div>
+  </div>
+
+  <div class="how-it-works">
+    <div class="section-label label-how">THE 4 PARSERS</div>
+    <div class="section-content">
+      <p><strong>AppraisalParser</strong> extracts: property_address, square_footage, bedrooms, bathrooms, lot_size, year_built, assessed_value, estimated_value, comparable sales from tables, and splits text into sections (Introduction, Assessment, Conclusion).</p>
+      <p><strong>ListingParser</strong> extracts: listing_price, MLS number, days_on_market, agent info, property features. It knows that a listing's price comes after "List Price:" while an appraisal's value comes after "Estimated Market Value:".</p>
+      <p><strong>MarketAnalysisParser</strong> extracts: neighborhood statistics, trends, median prices, year-over-year changes. It parses the statistical tables and creates per-neighborhood summaries.</p>
+      <p><strong>ComparableSalesParser</strong> extracts: individual sale records from the big table, with address, price, date, sqft, and price-per-sqft for each sale.</p>
+    </div>
+  </div>
+
+  <pre><span class="comment"># Each parser outputs structured fields + text sections</span>
+result = appraisal_parser.parse(extracted_doc)
+
+<span class="comment"># result looks like:</span>
+{
+    "structured_fields": {
+        "property_address": "742 Evergreen Terrace, Austin, TX",
+        "bedrooms": 4,
+        "estimated_value": "$575,000",
+        "comparable_sales": [...]
+    },
+    "text_sections": [
+        {"title": "Property Description", "content": "The property is..."},
+        {"title": "Valuation Conclusion", "content": "Based on our analysis..."}
+    ]
+}</pre>
+
+  <div class="callout tip">
+    <strong>Interview tip:</strong> This is your strongest talking point. "Standard RAG tools like LangChain treat PDFs as flat text. Our custom parsers understand the document structure, so when someone asks about 3-bedroom homes, we can filter by the actual bedroom count in metadata, not just hope the word '3-bedroom' appears near the right content."
+  </div>
+</div>
+
+<!-- chunker.py -->
+<div class="file-section">
+  <div class="file-header">
+    <span class="phase-badge phase-pipeline">Pipeline</span>
+    <h3>Smart Chunker</h3>
+    <code>pipeline/chunker.py</code>
+  </div>
+
+  <div class="what-it-does">
+    <div class="section-label label-what">WHAT IT DOES</div>
+    <div class="section-content">
+      <p>After parsing, we have structured data and text sections. But you can't embed an entire 3-page document as one vector. It would be too general and wouldn't match specific queries well. So the chunker splits each document into smaller, focused pieces while keeping important metadata attached.</p>
+    </div>
+  </div>
+
+  <div class="how-it-works">
+    <div class="section-label label-how">HOW IT WORKS</div>
+    <div class="section-content">
+      <p><strong>Semantic chunking (not dumb splitting):</strong> Instead of cutting every 800 characters blindly, it splits along section boundaries. The "Property Description" section becomes one chunk, the "Valuation Conclusion" becomes another. This means each chunk is about one topic.</p>
+      <p><strong>Paragraph-boundary splitting:</strong> If a section is longer than 800 chars, it splits at paragraph boundaries (double newlines) rather than mid-sentence. The overlap of 100 chars ensures no information is lost at boundaries.</p>
+      <p><strong>Metadata attachment:</strong> Every chunk gets rich metadata from the parser: property_address, neighborhood, bedrooms, bathrooms, square_footage, price, year_built, and document_type. This is crucial for hybrid search.</p>
+      <p><strong>Structured summary chunk:</strong> For property documents, it creates an extra "summary" chunk that lists all the structured fields in a readable format. This chunk is great for direct-match queries like "tell me about 742 Evergreen".</p>
+    </div>
+  </div>
+
+  <pre><span class="comment"># A single chunk looks like this (Pydantic model):</span>
+DocumentChunk(
+    text="The subject property at 742 Evergreen Terrace features...",
+    metadata={
+        "source_file": "appraisal_742_evergreen.pdf",
+        "document_type": "appraisal",
+        "property_address": "742 Evergreen Terrace, Austin, TX",
+        "neighborhood": "South Congress",
+        "bedrooms": 4,
+        "bathrooms": 3,
+        "price": 575000,
+        "section": "Property Description"
+    },
+    chunk_id="appraisal_742_evergreen_chunk_0"
+)</pre>
+
+  <div class="callout">
+    <strong>Key insight:</strong> The metadata is what makes hybrid search possible. When someone asks "3-bedroom homes under $600K in Downtown Austin", we can FILTER by bedrooms=3, price&lt;600000, neighborhood=Downtown Austin BEFORE doing vector similarity search. This is much more accurate than relying on embeddings alone.
+  </div>
+</div>
+
+<!-- embeddings.py -->
+<div class="file-section">
+  <div class="file-header">
+    <span class="phase-badge phase-retrieval">Retrieval</span>
+    <h3>Embedding Model</h3>
+    <code>retrieval/embeddings.py</code>
+  </div>
+
+  <div class="what-it-does">
+    <div class="section-label label-what">WHAT IT DOES</div>
+    <div class="section-content">
+      <p>Converts text chunks into number vectors (arrays of 384 numbers) so you can measure how "similar" two pieces of text are mathematically. The sentence "What's this house worth?" and the chunk about "Valuation Conclusion: estimated at $575,000" end up as vectors that are close together in 384-dimensional space.</p>
+    </div>
+  </div>
+
+  <div class="how-it-works">
+    <div class="section-label label-how">HOW IT WORKS</div>
+    <div class="section-content">
+      <p><strong>Local mode (demo):</strong> Uses <code>sentence-transformers/all-MiniLM-L6-v2</code>, a small but effective model that runs entirely on your laptop. It produces 384-dimensional vectors. No API key needed, works offline.</p>
+      <p><strong>Production mode:</strong> Uses Google Vertex AI's <code>text-embedding-004</code> model, which produces 768-dimensional vectors. Better quality, but requires GCP credentials and API calls.</p>
+      <p>The code uses a <strong>Protocol</strong> (Python's version of an interface) so both implementations have the same <code>embed()</code> and <code>embed_batch()</code> methods. A factory function <code>get_embedding_model()</code> checks the config flag and returns the right one.</p>
+    </div>
+  </div>
+
+  <pre><span class="comment"># The model converts text to a list of numbers</span>
+model = get_embedding_model()  <span class="comment"># returns LocalEmbeddingModel or VertexAI</span>
+
+vector = model.embed("What is this property worth?")
+<span class="comment"># vector = [0.023, -0.118, 0.445, ..., 0.067]  (384 numbers)</span>
+
+<span class="comment"># Similar questions produce similar vectors</span>
+<span class="comment"># "property valuation" and "how much is it worth" → vectors close together</span>
+<span class="comment"># "property valuation" and "best pizza in Austin" → vectors far apart</span></pre>
+</div>
+
+<!-- vector_store.py -->
+<div class="file-section">
+  <div class="file-header">
+    <span class="phase-badge phase-retrieval">Retrieval</span>
+    <h3>Vector Store (ChromaDB)</h3>
+    <code>retrieval/vector_store.py</code>
+  </div>
+
+  <div class="what-it-does">
+    <div class="section-label label-what">WHAT IT DOES</div>
+    <div class="section-content">
+      <p>This is the "searchable filing cabinet" from our library analogy. It stores all the embedded chunks and lets you search them by vector similarity (which chunks are most relevant to a query) and by metadata filters (only show me 3-bedroom homes).</p>
+    </div>
+  </div>
+
+  <div class="how-it-works">
+    <div class="section-label label-how">HOW IT WORKS</div>
+    <div class="section-content">
+      <p><strong>ChromaDB</strong> is a lightweight vector database that runs locally. No server needed, it just saves files to disk. It has 3 main operations:</p>
+      <p><code>add_chunks()</code> - Takes document chunks, converts them to vectors using the embedding model, and stores them with their metadata. Each chunk gets a unique ID.</p>
+      <p><code>search()</code> - Takes a query vector and optional metadata filters (a "where" clause). Returns the top-K most similar chunks. It uses cosine similarity: chunks whose vectors point in the same direction as the query vector score highest.</p>
+      <p><code>reset()</code> - Deletes everything so you can re-ingest from scratch.</p>
+    </div>
+  </div>
+
+  <pre><span class="comment"># Store chunks during ingestion</span>
+vector_store.add_chunks(all_chunks, embedding_model)
+
+<span class="comment"># Search with a metadata filter</span>
+results = vector_store.search(
+    query_vector=[0.023, -0.118, ...],  <span class="comment"># 384 numbers</span>
+    where={"bedrooms": 3, "neighborhood": "Downtown Austin"},
+    n_results=10
+)
+<span class="comment"># Returns: top 10 chunks about 3-bed Downtown Austin properties</span></pre>
+
+  <div class="callout green">
+    <strong>Production upgrade:</strong> In production, you'd swap ChromaDB for Vertex AI Vector Search. It handles millions of vectors, auto-scales, and integrates with GCP's security and monitoring. The swap requires minimal code changes because of the abstraction layer.
+  </div>
+</div>
+
+<!-- search.py -->
+<div class="file-section">
+  <div class="file-header">
+    <span class="phase-badge phase-retrieval">Retrieval</span>
+    <h3>Hybrid Search Engine</h3>
+    <code>retrieval/search.py</code>
+  </div>
+
+  <div class="what-it-does">
+    <div class="section-label label-what">WHAT IT DOES</div>
+    <div class="section-content">
+      <p>This is the smartest part of the retrieval system. Instead of just doing vector similarity search (which is what most RAG demos do), it combines three strategies: metadata filtering, vector similarity, and result reranking.</p>
+    </div>
+  </div>
+
+  <div class="how-it-works">
+    <div class="section-label label-how">THE 3-STAGE SEARCH PROCESS</div>
+    <div class="section-content">
+      <p><strong>Stage 1 - Extract Filters from Query:</strong> The function <code>extract_query_filters()</code> parses the natural language query using regex patterns. "3-bedroom homes under $600K in Downtown Austin" becomes <code>QueryFilters(bedrooms=3, max_price=600000, neighborhood="Downtown Austin")</code>. These filters narrow down the search space before any vector comparison.</p>
+      <p><strong>Stage 2 - Vector Search with Filters:</strong> The extracted filters become a ChromaDB "where" clause. ChromaDB first filters chunks by metadata (only 3-bed, under $600K, Downtown Austin), then ranks the remaining chunks by vector similarity to the query. This is much more accurate than searching all chunks.</p>
+      <p><strong>Stage 3 - Reranking:</strong> The raw results get bonus scores for specific matches. If a chunk's address matches the query (+0.15 boost), if the neighborhood matches (+0.08), if the document type matches the query intent (+0.05). Results are re-sorted by the boosted scores.</p>
+    </div>
+  </div>
+
+  <pre><span class="comment"># What happens when you search for "3-bedroom homes in Downtown Austin under 600K"</span>
+
+<span class="comment"># Stage 1: Extract filters</span>
+filters = extract_query_filters(query)
+<span class="comment"># QueryFilters(bedrooms=3, max_price=600000, neighborhood="Downtown Austin")</span>
+
+<span class="comment"># Stage 2: Build ChromaDB where clause</span>
+where = build_chroma_where(filters)
+<span class="comment"># {"$and": [{"bedrooms": 3}, {"price": {"$lte": 600000}}, ...]}</span>
+
+<span class="comment"># Stage 3: Search + Rerank</span>
+results = hybrid_search(query, embedding_model, vector_store)
+<span class="comment"># Returns SearchResult objects sorted by boosted relevance score</span></pre>
+
+  <div class="callout tip">
+    <strong>Interview tip:</strong> "Pure vector search struggles with numerical queries. If someone asks for homes under $600K, vector similarity might return a $1.2M mansion because the text descriptions are semantically similar. Our hybrid approach uses metadata filters first to ensure numerical constraints are respected, then vector similarity for semantic matching."
+  </div>
+</div>
+
+<!-- llm_client.py -->
+<div class="file-section">
+  <div class="file-header">
+    <span class="phase-badge phase-chatbot">Chatbot</span>
+    <h3>LLM Client</h3>
+    <code>chatbot/llm_client.py</code>
+  </div>
+
+  <div class="what-it-does">
+    <div class="section-label label-what">WHAT IT DOES</div>
+    <div class="section-content">
+      <p>This file handles communication with the large language model (LLM). It sends the assembled prompt (system instructions + retrieved documents + user question) and gets back a natural language answer.</p>
+    </div>
+  </div>
+
+  <div class="how-it-works">
+    <div class="section-label label-how">HOW IT WORKS</div>
+    <div class="section-content">
+      <p><strong>Demo mode:</strong> Uses <code>OpenAIClient</code> which calls GPT-4o-mini via the OpenAI API. Temperature is set to 0.3 (low = more factual, less creative). Has both <code>generate()</code> (full response at once) and <code>generate_stream()</code> (token-by-token for typing effect).</p>
+      <p><strong>Production mode:</strong> Uses <code>GeminiClient</code> which calls Gemini Pro via Vertex AI. Same interface, different backend. The factory function <code>get_llm_client()</code> reads the config flag and returns the right client.</p>
+      <p>Both clients implement the same protocol (interface), so the rest of the code doesn't care which one is active. This is the <strong>Strategy pattern</strong> from software design.</p>
+    </div>
+  </div>
+
+  <pre><span class="comment"># Factory pattern - one line switches between OpenAI and Gemini</span>
+client = get_llm_client()
+
+<span class="comment"># Same interface regardless of backend</span>
+response = client.generate(
+    system_prompt="You are a property valuation expert...",
+    user_prompt="Based on these documents: [chunks]... What is 742 Evergreen worth?"
+)
+<span class="comment"># response = "Based on the appraisal report, the estimated market value..."</span></pre>
+</div>
+
+<!-- prompt_templates.py -->
+<div class="file-section">
+  <div class="file-header">
+    <span class="phase-badge phase-chatbot">Chatbot</span>
+    <h3>Prompt Templates</h3>
+    <code>chatbot/prompt_templates.py</code>
+  </div>
+
+  <div class="what-it-does">
+    <div class="section-label label-what">WHAT IT DOES</div>
+    <div class="section-content">
+      <p>Different types of questions need different instructions to the LLM. A valuation question ("What's this house worth?") needs different guidance than a market trends question ("Are prices going up?"). This file contains query-specific prompt templates that guide the LLM to give the right kind of answer.</p>
+    </div>
+  </div>
+
+  <div class="how-it-works">
+    <div class="section-label label-how">THE 4 TEMPLATES</div>
+    <div class="section-content">
+      <p><strong>VALUATION_TEMPLATE:</strong> Tells the LLM to look for stated values first ("the appraisal says $575,000") before computing anything. Prevents the LLM from inventing estimates using price-per-sqft math.</p>
+      <p><strong>COMPARISON_TEMPLATE:</strong> Instructs structured side-by-side comparison of properties (price, size, condition, neighborhood).</p>
+      <p><strong>MARKET_ANALYSIS_TEMPLATE:</strong> Focuses on trends, statistics, and neighborhood-level insights.</p>
+      <p><strong>GENERAL_TEMPLATE:</strong> Catch-all for other questions. Tells the LLM to present even single results in detail rather than saying "insufficient data".</p>
+    </div>
+  </div>
+
+  <div class="how-it-works">
+    <div class="section-label label-how">HALLUCINATION PREVENTION</div>
+    <div class="section-content">
+      <p>The system prompt contains strict rules: "Only use information from the provided context", "If you don't have enough information, say INSUFFICIENT DATA", "Always cite your sources with [Source: filename]". These instructions prevent the LLM from making up property values or inventing market trends.</p>
+      <p>The function <code>classify_query()</code> reads the user's question and picks the right template based on keywords. "value", "worth", "price estimate" triggers VALUATION. "compare", "versus", "difference" triggers COMPARISON. And so on.</p>
+    </div>
+  </div>
+
+  <pre><span class="comment"># Query classification example</span>
+template = classify_query("What is 742 Evergreen Terrace worth?")
+<span class="comment"># Returns VALUATION_TEMPLATE because "worth" is a valuation keyword</span>
+
+template = classify_query("Compare homes in South Congress vs Downtown")
+<span class="comment"># Returns COMPARISON_TEMPLATE because "compare" is a comparison keyword</span></pre>
+</div>
+
+<!-- chatbot.py -->
+<div class="file-section">
+  <div class="file-header">
+    <span class="phase-badge phase-chatbot">Chatbot</span>
+    <h3>Main Orchestrator</h3>
+    <code>chatbot/chatbot.py</code>
+  </div>
+
+  <div class="what-it-does">
+    <div class="section-label label-what">WHAT IT DOES</div>
+    <div class="section-content">
+      <p>This is the conductor of the orchestra. When a user asks a question, this file coordinates the entire query flow: search for relevant documents, pick the right prompt template, call the LLM, verify the answer's numbers, extract source citations, and assess confidence. Everything flows through the <code>PropertyValuationChatbot.ask()</code> method.</p>
+    </div>
+  </div>
+
+  <div class="how-it-works">
+    <div class="section-label label-how">THE ask() METHOD - STEP BY STEP</div>
+    <div class="section-content">
+      <p><strong>Step 1 - Search:</strong> Calls <code>hybrid_search()</code> with the RAW query (not enriched with history). This was a critical bug fix. Originally, conversation history was appended to the query before searching, which meant filters from previous questions contaminated the current search.</p>
+      <p><strong>Step 2 - Classify:</strong> Determines what type of question this is (valuation, comparison, market, general) and picks the matching prompt template.</p>
+      <p><strong>Step 3 - Context check:</strong> If no relevant documents were found above the similarity threshold, returns "INSUFFICIENT DATA" immediately without calling the LLM. This saves API costs and prevents hallucination on empty results.</p>
+      <p><strong>Step 4 - Build prompt + add history:</strong> Assembles the system prompt + template + retrieved chunks + user question. Conversation history is ONLY added here (to the LLM prompt), not to the search. This way the LLM understands follow-up questions but the search isn't contaminated.</p>
+      <p><strong>Step 5 - Call LLM:</strong> Sends the assembled prompt to GPT-4o-mini (or Gemini) and gets the response.</p>
+      <p><strong>Step 6 - Verify numbers:</strong> Extracts all dollar amounts from the LLM's response and checks each one against dollar amounts found in the source documents. If a number is more than 20% away from any source number, it's flagged as "unverified". This catches hallucinated values.</p>
+      <p><strong>Step 7 - Extract sources and confidence:</strong> Pulls "[Source: filename]" citations from the response. Assesses confidence based on result count, similarity scores, and whether any numbers were unverified.</p>
+    </div>
+  </div>
+
+  <pre><span class="comment"># The critical fix: raw query for search, history only for LLM</span>
+
+<span class="comment"># Step 1: Search with RAW query (no history contamination)</span>
+results = hybrid_search(
+    query=query,  <span class="comment"># "Compare homes in South Congress" - just this</span>
+    embedding_model=self._embedding_model,
+    vector_store=self._vector_store,
+)
+
+<span class="comment"># Step 4: History is ONLY added to the LLM prompt</span>
+system_prompt, user_prompt = build_prompt(query, results)
+if self._history.messages:
+    context_hint = self._history.get_context_hint()
+    user_prompt = user_prompt + "\n" + context_hint
+<span class="comment"># Now the LLM knows about prior Q&A but search wasn't affected</span></pre>
+
+  <div class="callout">
+    <strong>Why the history bug was critical:</strong> Without this fix, if Query 2 asked about "3-bedroom homes in Downtown Austin under $600K", then Query 3 about "Compare 742 Evergreen Terrace" would ALSO filter for 3 bedrooms, Downtown Austin, and under $600K, because the history text contained those words. The search would find nothing because 742 Evergreen is in South Congress with a $575K price. Isolating search from history fixed this.
+  </div>
+</div>
+
+<!-- cli_demo.py -->
+<div class="file-section">
+  <div class="file-header">
+    <span class="phase-badge phase-demo">Demo</span>
+    <h3>CLI Demo Interface</h3>
+    <code>demo/cli_demo.py</code>
+  </div>
+
+  <div class="what-it-does">
+    <div class="section-label label-what">WHAT IT DOES</div>
+    <div class="section-content">
+      <p>Creates a beautiful terminal-based demo using the Rich library. Color-coded output, formatted tables showing retrieved documents with relevance scores, answer panels with confidence badges, and source citations. Perfect for the live interview demo where you run it in a terminal.</p>
+    </div>
+  </div>
+
+  <div class="how-it-works">
+    <div class="section-label label-how">KEY FUNCTIONS</div>
+    <div class="section-content">
+      <p><code>print_header()</code> - Displays the project title and description with blue styling.</p>
+      <p><code>print_query()</code> - Shows each query number and text in green.</p>
+      <p><code>print_retrieved_docs()</code> - Renders a Rich table showing all retrieved document chunks, their relevance scores, source files, and document types. This is great for the demo because the interviewer can see exactly which documents the system found.</p>
+      <p><code>print_answer()</code> - Shows the LLM's response in a styled panel with a confidence badge (HIGH/MEDIUM/LOW in green/yellow/red). Also shows extracted filters and source citations.</p>
+      <p>Two modes: <code>run_demo_queries()</code> runs the 5 pre-scripted queries automatically, and <code>run_interactive()</code> lets you type custom questions.</p>
+    </div>
+  </div>
+</div>
+
+<!-- streamlit_app.py -->
+<div class="file-section">
+  <div class="file-header">
+    <span class="phase-badge phase-demo">Demo</span>
+    <h3>Streamlit Web UI</h3>
+    <code>demo/streamlit_app.py</code>
+  </div>
+
+  <div class="what-it-does">
+    <div class="section-label label-what">WHAT IT DOES</div>
+    <div class="section-content">
+      <p>A web-based chat interface built with Streamlit. It looks like a modern chatbot with a sidebar showing architecture information, example query buttons you can click, and expandable sections showing the retrieved documents for each answer. Run it with <code>streamlit run demo/streamlit_app.py</code>.</p>
+    </div>
+  </div>
+
+  <div class="how-it-works">
+    <div class="section-label label-how">KEY FEATURES</div>
+    <div class="section-content">
+      <p><strong>Sidebar:</strong> Shows the system architecture description, lists the pipeline components, and has clickable example query buttons so the interviewer can try preset questions.</p>
+      <p><strong>Chat interface:</strong> Standard chat UI with user messages and assistant responses. Each response includes expandable "Retrieved Documents" sections so you can inspect what the system found.</p>
+      <p><strong>Confidence badges:</strong> Each answer shows HIGH/MEDIUM/LOW confidence with color coding.</p>
+      <p><strong>Cached initialization:</strong> Uses <code>@st.cache_resource</code> to cache the chatbot instance, so the embedding model and vector store are only loaded once, not on every page refresh.</p>
+    </div>
+  </div>
+</div>
+
+<!-- Entry points -->
+<div class="file-section">
+  <div class="file-header">
+    <span class="phase-badge phase-entry">Entry Point</span>
+    <h3>ingest.py, demo.py, query.py</h3>
+    <code>Entry point scripts</code>
+  </div>
+
+  <div class="what-it-does">
+    <div class="section-label label-what">WHAT THEY DO</div>
+    <div class="section-content">
+      <p><strong>ingest.py</strong> - Runs the complete Phase 1 pipeline. Generates PDFs, extracts text, classifies documents, parses structured data, chunks everything, creates embeddings, and stores in ChromaDB. Takes about 6-10 seconds. You run this once before demoing.</p>
+      <p><strong>demo.py</strong> - Runs Phase 2 with 5 pre-scripted queries that showcase different capabilities: valuation, search with filters, comparison, market trends, and error handling (nonexistent property). Add <code>--interactive</code> for free-form questions.</p>
+      <p><strong>query.py</strong> - Simple single-query interface: <code>python query.py "What is 742 Evergreen worth?"</code>. Good for quick testing.</p>
+    </div>
+  </div>
+
+  <pre><span class="comment"># Your interview demo flow:</span>
+
+<span class="comment"># Step 1: Ingest all documents (run once)</span>
+python ingest.py
+<span class="comment"># "Processing 11 documents... Done in 8.2 seconds"</span>
+
+<span class="comment"># Step 2: Run the demo</span>
+python demo.py
+<span class="comment"># Shows 5 queries with beautiful colored output</span>
+
+<span class="comment"># Step 3: Interactive mode for interviewer questions</span>
+python demo.py --interactive
+<span class="comment"># "Ask me anything about Austin real estate..."</span>
+
+<span class="comment"># Alternative: Web UI</span>
+streamlit run demo/streamlit_app.py</pre>
+</div>
+
+<hr class="divider">
+
+<!-- ========== HOW DATA FLOWS ========== -->
+<div class="big-picture">
+  <h2>End-to-End Example: What Happens When You Ask a Question</h2>
+  <p>Let's trace what happens when you type: <strong>"What is the estimated value of 742 Evergreen Terrace?"</strong></p>
+
+  <div class="analogy">
+    <strong>Step 1 - chatbot.py receives the query</strong><br>
+    The <code>ask()</code> method gets called with your raw question string.
+  </div>
+
+  <div class="analogy">
+    <strong>Step 2 - search.py extracts filters</strong><br>
+    <code>extract_query_filters()</code> scans the query with regex. It finds "742 Evergreen Terrace" matches an address pattern but no bedroom/price filters. Returns <code>QueryFilters(address="742 Evergreen Terrace")</code>.
+  </div>
+
+  <div class="analogy">
+    <strong>Step 3 - search.py runs hybrid search</strong><br>
+    The query text gets embedded into a 384-number vector. ChromaDB searches all stored chunks, filtering by address metadata where possible, and returns the top 10 most similar chunks. The appraisal chunks for 742 Evergreen score highest because they're about that specific property.
+  </div>
+
+  <div class="analogy">
+    <strong>Step 4 - search.py reranks results</strong><br>
+    Chunks that mention "742 Evergreen" in their address metadata get a +0.15 score boost. Appraisal documents get a bonus because the query is about valuation. Results are re-sorted.
+  </div>
+
+  <div class="analogy">
+    <strong>Step 5 - prompt_templates.py classifies the query</strong><br>
+    The word "value" triggers the VALUATION template. This template tells the LLM: "Look for stated values in the documents first. Don't compute your own estimate."
+  </div>
+
+  <div class="analogy">
+    <strong>Step 6 - chatbot.py builds the prompt</strong><br>
+    Assembles: system prompt (you are a property valuation expert) + valuation template + the top retrieved chunks as context + the user's question. If there's conversation history, it's appended as a hint.
+  </div>
+
+  <div class="analogy">
+    <strong>Step 7 - llm_client.py calls GPT-4o-mini</strong><br>
+    The full prompt is sent to OpenAI's API. GPT-4o-mini reads the retrieved chunks (which contain the appraisal's "Valuation Conclusion: estimated market value of $575,000") and generates a natural language answer citing that value.
+  </div>
+
+  <div class="analogy">
+    <strong>Step 8 - chatbot.py verifies numbers</strong><br>
+    The response mentions "$575,000". The verification function checks: does $575,000 appear in the source chunks? Yes, it's in the appraisal conclusion. Verified. If the LLM had said "$999,000" (not in any source), it would be flagged as unverified.
+  </div>
+
+  <div class="analogy">
+    <strong>Step 9 - cli_demo.py displays the answer</strong><br>
+    The Rich library renders a color-coded panel with the answer, a "HIGH" confidence badge (green), the source citation "[Source: appraisal_742_evergreen.pdf]", and the extracted filters used for search.
+  </div>
+</div>
+
+<hr class="divider">
+
+<!-- ========== PRODUCTION PATH ========== -->
+<div class="big-picture">
+  <h2>Local Demo vs Google Cloud Production</h2>
+  <p>Every component has a local version (for the demo) and a Google Cloud version (for production). Here's the mapping:</p>
+
+  <table>
+    <tr><th>Component</th><th>Demo (Local)</th><th>Production (Google Cloud)</th></tr>
+    <tr><td>PDF Extraction</td><td>PyMuPDF (fitz)</td><td>Document AI</td></tr>
+    <tr><td>Embeddings</td><td>sentence-transformers (384-dim)</td><td>Vertex AI text-embedding-004 (768-dim)</td></tr>
+    <tr><td>Vector Store</td><td>ChromaDB (local files)</td><td>Vertex AI Vector Search (managed)</td></tr>
+    <tr><td>LLM</td><td>OpenAI GPT-4o-mini</td><td>Gemini Pro via Vertex AI</td></tr>
+    <tr><td>Switch</td><td><code>USE_VERTEX_AI=False</code></td><td><code>USE_VERTEX_AI=True</code></td></tr>
+  </table>
+</div>
+
+</div>
+</body>
+</html>

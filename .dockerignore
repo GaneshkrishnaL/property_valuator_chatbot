@@ -1,0 +1,10 @@
+# .dockerignore - don't send these to Cloud Build
+venv/
+__pycache__/
+*.pyc
+.env
+key.json
+.git/
+# NOTE: We intentionally include data/pdfs/ and chroma_db/ in the build context.
+# The Dockerfile runs ingest.py during build to pre-populate ChromaDB,
+# then the built chroma_db/ is baked into the image so Cloud Run has data.

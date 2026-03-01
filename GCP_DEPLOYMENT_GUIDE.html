@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Deploy RAG Chatbot to Google Cloud - Complete Beginner Guide</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f172a; color: #e2e8f0; line-height: 1.7; }
+  .hero { background: linear-gradient(135deg, #1a1f36 0%, #0f172a 100%); border-bottom: 3px solid #4285f4; padding: 50px 40px; text-align: center; }
+  .hero h1 { font-size: 2em; color: #f8fafc; margin-bottom: 8px; }
+  .hero p { color: #94a3b8; font-size: 1.05em; max-width: 700px; margin: 0 auto; }
+  .container { max-width: 900px; margin: 0 auto; padding: 30px 20px; }
+
+  .phase { margin-bottom: 50px; }
+  .phase-header {
+    display: flex; align-items: center; gap: 14px; margin-bottom: 20px;
+    padding-bottom: 10px; border-bottom: 2px solid #334155;
+  }
+  .phase-num {
+    width: 44px; height: 44px; border-radius: 50%; display: flex;
+    align-items: center; justify-content: center; font-weight: 800;
+    font-size: 1.1em; color: #fff; flex-shrink: 0;
+  }
+  .phase-num.blue { background: #4285f4; }
+  .phase-num.green { background: #34a853; }
+  .phase-num.yellow { background: #fbbc04; color: #0a0e1a; }
+  .phase-num.red { background: #ea4335; }
+  .phase-num.purple { background: #a855f7; }
+  .phase-title { font-size: 1.4em; font-weight: 700; color: #f8fafc; }
+
+  .step {
+    background: #1e293b; border-radius: 10px; padding: 20px 24px;
+    border: 1px solid #334155; margin-bottom: 14px;
+  }
+  .step h3 { color: #60a5fa; font-size: 1.05em; margin-bottom: 8px; }
+  .step p { color: #cbd5e1; font-size: 0.92em; margin-bottom: 10px; }
+
+  pre {
+    background: #0a0e1a; border: 1px solid #334155; border-radius: 8px;
+    padding: 14px 16px; overflow-x: auto; font-size: 0.85em;
+    color: #e2e8f0; margin: 10px 0; line-height: 1.5;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+  }
+  code { color: #60a5fa; font-family: 'SF Mono', 'Fira Code', monospace; font-size: 0.9em; }
+  .cmd { color: #22c55e; }
+  .comment { color: #64748b; }
+  .flag { color: #fbbf24; }
+  .str { color: #86efac; }
+
+  .explain {
+    background: #0f172a; border-left: 4px solid #4285f4;
+    padding: 12px 16px; border-radius: 0 8px 8px 0; margin: 12px 0;
+    font-size: 0.88em; color: #94a3b8;
+  }
+  .explain strong { color: #60a5fa; }
+  .warn {
+    background: #0f172a; border-left: 4px solid #ea4335;
+    padding: 12px 16px; border-radius: 0 8px 8px 0; margin: 12px 0;
+    font-size: 0.88em; color: #94a3b8;
+  }
+  .warn strong { color: #ea4335; }
+  .tip {
+    background: #0f172a; border-left: 4px solid #34a853;
+    padding: 12px 16px; border-radius: 0 8px 8px 0; margin: 12px 0;
+    font-size: 0.88em; color: #94a3b8;
+  }
+  .tip strong { color: #34a853; }
+
+  .map-table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 0.88em; }
+  .map-table th { background: #0f172a; color: #60a5fa; text-align: left; padding: 10px 14px; border-bottom: 2px solid #334155; }
+  .map-table td { padding: 10px 14px; border-bottom: 1px solid #1e293b; color: #cbd5e1; }
+  .map-table tr:hover td { background: #1e293b44; }
+
+  .cost-badge {
+    display: inline-block; padding: 2px 8px; border-radius: 4px;
+    font-size: 0.78em; font-weight: 700;
+  }
+  .cost-free { background: #22c55e22; color: #22c55e; }
+  .cost-low { background: #eab30822; color: #eab308; }
+  .cost-med { background: #f9731622; color: #f97316; }
+
+  .arch-box {
+    background: #1e293b; border: 2px solid #4285f4; border-radius: 12px;
+    padding: 24px; margin: 20px 0; text-align: center;
+  }
+  .arch-flow { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 8px; margin: 14px 0; }
+  .arch-item {
+    background: #0f172a; border: 1px solid #334155; border-radius: 8px;
+    padding: 8px 14px; font-size: 0.82em; text-align: center;
+  }
+  .arch-item .svc { color: #4285f4; font-weight: 700; font-size: 0.95em; }
+  .arch-item .desc { color: #94a3b8; font-size: 0.85em; }
+  .arch-arrow { color: #4285f4; font-size: 1.4em; font-weight: bold; }
+
+  hr { border: none; border-top: 1px solid #334155; margin: 40px 0; }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <h1>Deploy Your RAG Chatbot to Google Cloud</h1>
+  <p>Complete beginner-friendly guide. Every command explained. You'll learn GCP architecture hands-on.</p>
+</div>
+
+<div class="container">
+
+<!-- ============ ARCHITECTURE MAP ============ -->
+<div class="arch-box">
+  <h2 style="color:#f8fafc; margin-bottom: 10px;">What You're Building on GCP</h2>
+  <p style="color:#94a3b8; margin-bottom: 16px;">Each local component maps to a Google Cloud service</p>
+
+  <table class="map-table">
+    <tr><th>Component</th><th>Local (Now)</th><th>Google Cloud</th><th>Why This Service</th><th>Cost</th></tr>
+    <tr>
+      <td>PDF Processing</td><td>PyMuPDF</td><td><strong style="color:#4285f4">Document AI</strong></td>
+      <td>OCR, table extraction, multilingual (Telugu!)</td>
+      <td><span class="cost-badge cost-free">Free tier: 1000 pages/mo</span></td>
+    </tr>
+    <tr>
+      <td>Embeddings</td><td>sentence-transformers (local)</td><td><strong style="color:#4285f4">Vertex AI Embeddings</strong></td>
+      <td>768-dim vectors, multilingual, managed scaling</td>
+      <td><span class="cost-badge cost-free">Free tier available</span></td>
+    </tr>
+    <tr>
+      <td>Vector Database</td><td>ChromaDB (local files)</td><td><strong style="color:#4285f4">Firestore</strong> (with vector search)</td>
+      <td>Serverless, auto-scales, built-in vector search since 2024</td>
+      <td><span class="cost-badge cost-free">Free tier: 1GB</span></td>
+    </tr>
+    <tr>
+      <td>LLM</td><td>OpenAI GPT-4o-mini</td><td><strong style="color:#4285f4">Gemini Pro (Vertex AI)</strong></td>
+      <td>Google's own LLM, keeps everything in GCP ecosystem</td>
+      <td><span class="cost-badge cost-low">~$0.001 per query</span></td>
+    </tr>
+    <tr>
+      <td>PDF Storage</td><td>Local folder</td><td><strong style="color:#4285f4">Cloud Storage</strong></td>
+      <td>Unlimited storage, triggers pipeline on upload</td>
+      <td><span class="cost-badge cost-free">Free tier: 5GB</span></td>
+    </tr>
+    <tr>
+      <td>App Hosting</td><td>localhost</td><td><strong style="color:#4285f4">Cloud Run</strong></td>
+      <td>Serverless containers, auto-scales to zero (no idle cost)</td>
+      <td><span class="cost-badge cost-free">Free tier: 2M requests/mo</span></td>
+    </tr>
+    <tr>
+      <td>Config/Secrets</td><td>.env file</td><td><strong style="color:#4285f4">Secret Manager</strong></td>
+      <td>Secure API key storage, no keys in code</td>
+      <td><span class="cost-badge cost-free">Free tier: 6 secrets</span></td>
+    </tr>
+  </table>
+
+  <div class="tip" style="text-align:left; margin-top: 16px;">
+    <strong>Total cost estimate:</strong> With the $300 free credits for new accounts, this entire project will cost you $0. Even after free credits expire, the free tier covers everything for a demo-sized project. You'd only start paying if you process thousands of documents or get heavy traffic.
+  </div>
+</div>
+
+<hr>
+
+<!-- ============ PHASE 1: GCP ACCOUNT ============ -->
+<div class="phase">
+  <div class="phase-header">
+    <div class="phase-num blue">1</div>
+    <div class="phase-title">Create Your Google Cloud Account</div>
+  </div>
+
+  <div class="step">
+    <h3>Step 1.1: Sign up for Google Cloud</h3>
+    <p>Go to <strong>https://cloud.google.com</strong> and click "Start free". Sign in with your Google account. You'll get <strong>$300 in free credits</strong> valid for 90 days. You need a credit card for verification, but you WON'T be charged unless you manually upgrade to a paid account.</p>
+
+    <div class="explain">
+      <strong>What is Google Cloud?</strong> It's Google's collection of cloud services. Think of it like renting Google's computers, databases, and AI models instead of running everything on your laptop. You pay only for what you use, and most services have a free tier.
+    </div>
+  </div>
+
+  <div class="step">
+    <h3>Step 1.2: Create a Project</h3>
+    <p>A "project" in GCP is like a folder that holds all your services, billing, and permissions together. Everything we build goes into one project.</p>
+
+    <p>In the GCP Console (the web dashboard), click the project dropdown at the top and click "NEW PROJECT":</p>
+    <pre>Project name: <span class="str">property-valuation-chatbot</span>
+Organization: <span class="comment">(leave as "No organization" if you don't have one)</span></pre>
+
+    <div class="explain">
+      <strong>Why a project?</strong> GCP organizes everything by project. Billing is tracked per-project, permissions are set per-project, and when you're done experimenting, you can delete the entire project and everything gets cleaned up. Very neat.
+    </div>
+  </div>
+
+  <div class="step">
+    <h3>Step 1.3: Install the Google Cloud CLI (gcloud)</h3>
+    <p>This is the command-line tool for talking to Google Cloud from your Mac's terminal.</p>
+    <pre><span class="comment"># On Mac, install using Homebrew (easiest way)</span>
+<span class="cmd">brew install google-cloud-sdk</span>
+
+<span class="comment"># If you don't have Homebrew, install it first:</span>
+<span class="cmd">/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"</span>
+
+<span class="comment"># After installing gcloud, log in to your Google account:</span>
+<span class="cmd">gcloud auth login</span>
+<span class="comment"># This opens a browser window. Sign in with your Google account.</span>
+
+<span class="comment"># Set your project as the default:</span>
+<span class="cmd">gcloud config set project property-valuation-chatbot</span></pre>
+
+    <div class="explain">
+      <strong>What is gcloud?</strong> It's like a remote control for Google Cloud. Instead of clicking through the web dashboard, you type commands. <code>gcloud config set project ...</code> tells gcloud "every command I run from now on should target this project."
+    </div>
+  </div>
+
+  <div class="step">
+    <h3>Step 1.4: Enable the APIs we need</h3>
+    <p>GCP services are "off" by default. You need to enable each service you want to use. Think of it like turning on switches.</p>
+    <pre><span class="comment"># Enable all the services we'll use (run this as one command)</span>
+<span class="cmd">gcloud services enable \
+  aiplatform.googleapis.com \
+  documentai.googleapis.com \
+  run.googleapis.com \
+  cloudbuild.googleapis.com \
+  storage.googleapis.com \
+  secretmanager.googleapis.com \
+  firestore.googleapis.com \
+  artifactregistry.googleapis.com</span></pre>
+
+    <div class="explain">
+      <strong>What are APIs?</strong> Each GCP service (Vertex AI, Document AI, Cloud Run, etc.) exposes an API (Application Programming Interface). Enabling the API means "I want to use this service in my project." It doesn't cost anything to enable them. You only pay when you actually USE them.
+    </div>
+
+    <p>Here's what each one does:</p>
+    <table class="map-table">
+      <tr><td><code>aiplatform</code></td><td>Vertex AI - embeddings and Gemini LLM</td></tr>
+      <tr><td><code>documentai</code></td><td>Document AI - PDF OCR and table extraction</td></tr>
+      <tr><td><code>run</code></td><td>Cloud Run - hosts your app as a web service</td></tr>
+      <tr><td><code>cloudbuild</code></td><td>Cloud Build - builds your Docker container in the cloud</td></tr>
+      <tr><td><code>storage</code></td><td>Cloud Storage - stores your PDF files</td></tr>
+      <tr><td><code>secretmanager</code></td><td>Secret Manager - stores API keys securely</td></tr>
+      <tr><td><code>firestore</code></td><td>Firestore - database with vector search</td></tr>
+      <tr><td><code>artifactregistry</code></td><td>Artifact Registry - stores your Docker images</td></tr>
+    </table>
+  </div>
+</div>
+
+<hr>
+
+<!-- ============ PHASE 2: CLOUD STORAGE ============ -->
+<div class="phase">
+  <div class="phase-header">
+    <div class="phase-num green">2</div>
+    <div class="phase-title">Set Up Cloud Storage for PDFs</div>
+  </div>
+
+  <div class="step">
+    <h3>Step 2.1: Create a Storage Bucket</h3>
+    <p>A "bucket" is like a folder in the cloud that stores files. We'll put our PDFs here.</p>
+    <pre><span class="comment"># Create a bucket (name must be globally unique, so add your initials)</span>
+<span class="cmd">gcloud storage buckets create gs://pvr-chatbot-ganesh \
+  --location=us-central1 \
+  --uniform-bucket-level-access</span>
+
+<span class="comment"># Create subfolders for organizing</span>
+<span class="cmd">gcloud storage cp /dev/null gs://pvr-chatbot-ganesh/raw-pdfs/
+gcloud storage cp /dev/null gs://pvr-chatbot-ganesh/processed/</span></pre>
+
+    <div class="explain">
+      <strong>What is Cloud Storage?</strong> Think of it like Google Drive, but for your application. Your app can upload, download, and list files programmatically. The <code>--location=us-central1</code> means your files are stored in Google's data center in Iowa, USA. You can change this to <code>asia-south1</code> (Mumbai) if you want data closer to India.
+    </div>
+  </div>
+
+  <div class="step">
+    <h3>Step 2.2: Upload your PDFs</h3>
+    <pre><span class="comment"># Upload the generated sample PDFs</span>
+<span class="cmd">gcloud storage cp data/pdfs/*.pdf gs://pvr-chatbot-ganesh/raw-pdfs/</span>
+
+<span class="comment"># Later, you can upload your real Indian property docs too:</span>
+<span class="comment"># gcloud storage cp ~/Downloads/PVR-1*.docx gs://pvr-chatbot-ganesh/raw-pdfs/</span></pre>
+  </div>
+</div>
+
+<hr>
+
+<!-- ============ PHASE 3: DOCUMENT AI ============ -->
+<div class="phase">
+  <div class="phase-header">
+    <div class="phase-num green">3</div>
+    <div class="phase-title">Set Up Document AI (PDF Processing)</div>
+  </div>
+
+  <div class="step">
+    <h3>Step 3.1: Create a Document AI Processor</h3>
+    <p>Document AI is Google's service for extracting text, tables, and entities from documents. It handles scanned PDFs, handwriting, and even Telugu text.</p>
+
+    <pre><span class="comment"># Go to the Document AI console in your browser:</span>
+<span class="str">https://console.cloud.google.com/ai/document-ai</span>
+
+<span class="comment"># Click "CREATE PROCESSOR"</span>
+<span class="comment"># Select "Document OCR" (the general-purpose one)</span>
+<span class="comment"># Name it: property-doc-processor</span>
+<span class="comment"># Region: us (or eu)</span>
+<span class="comment"># Click CREATE</span>
+
+<span class="comment"># IMPORTANT: Copy the Processor ID shown on the page</span>
+<span class="comment"># It looks like: a1b2c3d4e5f6g7h8</span>
+<span class="comment"># You'll need this in your code</span></pre>
+
+    <div class="explain">
+      <strong>What is Document AI?</strong> Remember how our local pipeline uses PyMuPDF to extract text from PDFs? Document AI does the same thing but WAY better. It uses Google's ML models to understand document layouts, detect tables with cell-level accuracy, OCR scanned pages (including Telugu!), and even extract entities like addresses and currency amounts automatically. It's the production replacement for our <code>pdf_extractor.py</code>.
+    </div>
+  </div>
+
+  <div class="step">
+    <h3>Step 3.2: Test it with your scanned Sale Deed</h3>
+    <p>This is the cool part. Upload your Telugu sale deed to see Document AI handle what Tesseract couldn't.</p>
+    <pre><span class="comment"># In the Document AI console, click "Test Your Processor"</span>
+<span class="comment"># Upload: 0497_001 (1).pdf</span>
+<span class="comment"># Watch it extract Telugu + English text, detect tables, find entities</span>
+<span class="comment"># This is a GREAT demo moment for the interview!</span></pre>
+  </div>
+</div>
+
+<hr>
+
+<!-- ============ PHASE 4: VERTEX AI ============ -->
+<div class="phase">
+  <div class="phase-header">
+    <div class="phase-num yellow">4</div>
+    <div class="phase-title">Set Up Vertex AI (Embeddings + Gemini)</div>
+  </div>
+
+  <div class="step">
+    <h3>Step 4.1: Enable Vertex AI and test Gemini</h3>
+    <pre><span class="comment"># Vertex AI was already enabled in Step 1.4</span>
+<span class="comment"># Let's set the default region</span>
+<span class="cmd">gcloud config set ai/region us-central1</span>
+
+<span class="comment"># Test that Gemini works from the command line:</span>
+<span class="cmd">gcloud ai models describe gemini-2.0-flash --region=us-central1</span></pre>
+
+    <div class="explain">
+      <strong>What is Vertex AI?</strong> It's Google's unified AI platform. It hosts embedding models (converting text to vectors), LLMs like Gemini (generating answers), and vector search (finding similar vectors). In our chatbot, it replaces both the local sentence-transformers model AND OpenAI GPT-4o-mini. Everything stays within Google's ecosystem.
+    </div>
+  </div>
+
+  <div class="step">
+    <h3>Step 4.2: Set up authentication for your app</h3>
+    <pre><span class="comment"># Create a "service account" - this is like a username for your app</span>
+<span class="cmd">gcloud iam service-accounts create pvr-chatbot-sa \
+  --display-name="Property Valuation Chatbot"</span>
+
+<span class="comment"># Give it permission to use the services it needs</span>
+<span class="cmd">PROJECT_ID=$(gcloud config get-value project)</span>
+
+<span class="cmd">gcloud projects add-iam-policy-binding $PROJECT_ID \
+  --member="serviceAccount:pvr-chatbot-sa@$PROJECT_ID.iam.gserviceaccount.com" \
+  --role="roles/aiplatform.user"</span>
+
+<span class="cmd">gcloud projects add-iam-policy-binding $PROJECT_ID \
+  --member="serviceAccount:pvr-chatbot-sa@$PROJECT_ID.iam.gserviceaccount.com" \
+  --role="roles/documentai.editor"</span>
+
+<span class="cmd">gcloud projects add-iam-policy-binding $PROJECT_ID \
+  --member="serviceAccount:pvr-chatbot-sa@$PROJECT_ID.iam.gserviceaccount.com" \
+  --role="roles/storage.objectViewer"</span>
+
+<span class="cmd">gcloud projects add-iam-policy-binding $PROJECT_ID \
+  --member="serviceAccount:pvr-chatbot-sa@$PROJECT_ID.iam.gserviceaccount.com" \
+  --role="roles/datastore.user"</span>
+
+<span class="comment"># Download a key file for local testing</span>
+<span class="cmd">gcloud iam service-accounts keys create key.json \
+  --iam-account=pvr-chatbot-sa@$PROJECT_ID.iam.gserviceaccount.com</span>
+
+<span class="comment"># Set the environment variable so your Python code can authenticate</span>
+<span class="cmd">export GOOGLE_APPLICATION_CREDENTIALS="key.json"</span></pre>
+
+    <div class="explain">
+      <strong>What is a Service Account?</strong> When YOU use GCP, you log in with your Google account. But when your APP uses GCP, it needs its own identity. A service account is like a "robot user" for your app. You give it specific permissions (can use Vertex AI, can read Cloud Storage, etc.) and it gets a key file to prove its identity. This is how your Python code authenticates with Google Cloud services.
+    </div>
+
+    <div class="warn">
+      <strong>Security warning:</strong> Never commit <code>key.json</code> to git! Add it to your <code>.gitignore</code>. When deployed on Cloud Run, the service account authenticates automatically without a key file.
+    </div>
+  </div>
+</div>
+
+<hr>
+
+<!-- ============ PHASE 5: CODE CHANGES ============ -->
+<div class="phase">
+  <div class="phase-header">
+    <div class="phase-num purple">5</div>
+    <div class="phase-title">Update Your Code for GCP</div>
+  </div>
+
+  <div class="step">
+    <h3>Step 5.1: Update config.py</h3>
+    <p>Flip the flags we built into the architecture from day one:</p>
+    <pre><span class="comment"># config.py - change these two lines:</span>
+USE_VERTEX_AI = <span class="str">True</span>    <span class="comment"># was False</span>
+USE_GEMINI = <span class="str">True</span>       <span class="comment"># was False</span>
+
+<span class="comment"># Add your GCP project details:</span>
+GCP_PROJECT_ID = <span class="str">"property-valuation-chatbot"</span>
+GCP_LOCATION = <span class="str">"us-central1"</span>
+DOCUMENT_AI_PROCESSOR_ID = <span class="str">"your-processor-id-from-step-3"</span></pre>
+
+    <div class="explain">
+      <strong>Remember this from the architecture guide?</strong> The entire codebase was designed with this moment in mind. The embedding model, LLM client, and PDF extractor all have factory functions that check these flags and return the appropriate implementation. Two lines change, the whole system switches to GCP.
+    </div>
+  </div>
+
+  <div class="step">
+    <h3>Step 5.2: Update requirements.txt</h3>
+    <pre><span class="comment"># Add these GCP-specific packages:</span>
+google-cloud-aiplatform>=1.38.0
+google-cloud-documentai>=2.20.0
+google-cloud-storage>=2.14.0
+google-cloud-firestore>=2.16.0</pre>
+  </div>
+
+  <div class="step">
+    <h3>Step 5.3: Create a Dockerfile</h3>
+    <p>A Dockerfile tells Cloud Build how to package your app into a container.</p>
+    <pre><span class="comment"># Dockerfile</span>
+FROM python:3.11-slim
+
+WORKDIR /app
+
+<span class="comment"># Install system dependencies</span>
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+<span class="comment"># Install Python dependencies</span>
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+<span class="comment"># Copy application code</span>
+COPY . .
+
+<span class="comment"># Run the Streamlit app on Cloud Run's expected port</span>
+EXPOSE 8080
+CMD ["streamlit", "run", "demo/streamlit_app.py", \
+     "--server.port=8080", \
+     "--server.address=0.0.0.0", \
+     "--server.headless=true"]</pre>
+
+    <div class="explain">
+      <strong>What is Docker?</strong> Docker packages your entire app (code + dependencies + Python version) into a "container" - a portable box that runs exactly the same everywhere. Instead of telling Cloud Run "install Python, install these packages, set these env vars...", you give it one container that has everything pre-built. It's like shipping a fully assembled computer instead of shipping parts with assembly instructions.
+    </div>
+  </div>
+
+  <div class="step">
+    <h3>Step 5.4: Create .dockerignore</h3>
+    <pre><span class="comment"># .dockerignore - don't send these to Cloud Build</span>
+venv/
+__pycache__/
+*.pyc
+.env
+key.json
+chroma_db/
+data/pdfs/
+.git/</pre>
+  </div>
+</div>
+
+<hr>
+
+<!-- ============ PHASE 6: DEPLOY ============ -->
+<div class="phase">
+  <div class="phase-header">
+    <div class="phase-num red">6</div>
+    <div class="phase-title">Deploy to Cloud Run</div>
+  </div>
+
+  <div class="step">
+    <h3>Step 6.1: Build and deploy (one command!)</h3>
+    <pre><span class="comment"># This single command does everything:</span>
+<span class="comment"># 1. Uploads your code to Cloud Build</span>
+<span class="comment"># 2. Builds the Docker container in the cloud</span>
+<span class="comment"># 3. Pushes it to Artifact Registry</span>
+<span class="comment"># 4. Deploys it to Cloud Run</span>
+<span class="comment"># 5. Gives you a public URL</span>
+
+<span class="cmd">gcloud run deploy pvr-chatbot \
+  --source=. \
+  --region=us-central1 \
+  --service-account=pvr-chatbot-sa@$(gcloud config get-value project).iam.gserviceaccount.com \
+  --allow-unauthenticated \
+  --memory=2Gi \
+  --cpu=2 \
+  --timeout=300 \
+  --set-env-vars="GCP_PROJECT_ID=$(gcloud config get-value project),GCP_LOCATION=us-central1,USE_VERTEX_AI=true,USE_GEMINI=true"</span></pre>
+
+    <div class="explain">
+      <strong>What is Cloud Run?</strong> It runs your Docker container as a web service. When someone visits the URL, Cloud Run starts your container, handles the request, and then shuts it down when idle (so you don't pay for idle time). The <code>--allow-unauthenticated</code> flag means anyone with the URL can access your Streamlit app (perfect for the interview demo). <code>--memory=2Gi</code> gives your app 2GB of RAM (needed for the embedding model).
+    </div>
+  </div>
+
+  <div class="step">
+    <h3>Step 6.2: Get your live URL</h3>
+    <pre><span class="comment"># After deployment, Cloud Run gives you a URL like:</span>
+<span class="str">https://pvr-chatbot-xxxxx-uc.a.run.app</span>
+
+<span class="comment"># Open it in your browser - your Streamlit app is live!</span>
+<span class="comment"># You can share this URL with anyone.</span>
+
+<span class="comment"># Check the status:</span>
+<span class="cmd">gcloud run services describe pvr-chatbot --region=us-central1</span></pre>
+
+    <div class="tip">
+      <strong>Interview power move:</strong> Open this URL on your phone during the interview. "Here's the same chatbot running on Google Cloud. You can try it on your phone right now." Interviewers LOVE live demos they can interact with.
+    </div>
+  </div>
+</div>
+
+<hr>
+
+<!-- ============ ARCHITECTURE DIAGRAM ============ -->
+<div class="phase">
+  <div class="phase-header">
+    <div class="phase-num blue">7</div>
+    <div class="phase-title">Your GCP Architecture (Interview Talking Points)</div>
+  </div>
+
+  <div class="arch-box">
+    <h3 style="color:#f8fafc; margin-bottom: 16px;">Production Architecture on Google Cloud</h3>
+
+    <div class="arch-flow">
+      <div class="arch-item">
+        <div class="svc">User / Browser</div>
+        <div class="desc">Streamlit UI</div>
+      </div>
+      <div class="arch-arrow">&rarr;</div>
+      <div class="arch-item">
+        <div class="svc">Cloud Run</div>
+        <div class="desc">Hosts the app</div>
+      </div>
+      <div class="arch-arrow">&rarr;</div>
+      <div class="arch-item">
+        <div class="svc">Vertex AI Gemini</div>
+        <div class="desc">Generates answers</div>
+      </div>
+    </div>
+
+    <div class="arch-flow">
+      <div class="arch-item">
+        <div class="svc">Cloud Storage</div>
+        <div class="desc">Stores PDFs</div>
+      </div>
+      <div class="arch-arrow">&rarr;</div>
+      <div class="arch-item">
+        <div class="svc">Document AI</div>
+        <div class="desc">OCR + table extraction</div>
+      </div>
+      <div class="arch-arrow">&rarr;</div>
+      <div class="arch-item">
+        <div class="svc">Vertex AI Embeddings</div>
+        <div class="desc">Text &rarr; vectors</div>
+      </div>
+      <div class="arch-arrow">&rarr;</div>
+      <div class="arch-item">
+        <div class="svc">Firestore</div>
+        <div class="desc">Vector search</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="step">
+    <h3>What to say in the interview</h3>
+    <p>When the interviewer asks about your architecture, walk them through it like this:</p>
+
+    <div class="tip">
+      <strong>"A user uploads a PDF to Cloud Storage. That triggers Document AI to extract text and tables, even from scanned Telugu documents. The extracted text goes through my custom parser pipeline which classifies the document type and extracts structured metadata like property address, bedrooms, and price. The parsed chunks get embedded using Vertex AI's text-embedding-004 model and stored in Firestore with vector search indexing.</strong>
+      <br><br>
+      <strong>When a user asks a question, my hybrid search engine first extracts structured filters from the query using regex, then runs a vector similarity search on Firestore with those filters applied, then reranks results. The retrieved context gets injected into a query-specific prompt template, and Gemini Pro generates the answer. Post-processing verifies that any dollar amounts in the response actually exist in the source documents to prevent hallucination."</strong>
+    </div>
+  </div>
+
+  <div class="step">
+    <h3>GCP Services Cheat Sheet for the Interview</h3>
+    <table class="map-table">
+      <tr><th>If they ask about...</th><th>You say...</th></tr>
+      <tr><td>"How do you handle scanned PDFs?"</td><td>"Document AI does OCR with ML-based table detection and supports 200+ languages including Telugu. It handles handwriting, stamps, and poor scan quality."</td></tr>
+      <tr><td>"How does it scale?"</td><td>"Cloud Run auto-scales from 0 to 1000 instances based on traffic. Firestore handles millions of vectors. Vertex AI embeddings and Gemini are fully managed and scale automatically."</td></tr>
+      <tr><td>"What about security?"</td><td>"Service accounts with least-privilege IAM roles. API keys in Secret Manager, not in code. Cloud Run supports VPC connectors for private networking. All data encrypted at rest and in transit."</td></tr>
+      <tr><td>"Cost?"</td><td>"Cloud Run scales to zero when idle, so no cost when not in use. Document AI free tier covers 1000 pages/month. Firestore free tier covers 1GB. For a typical real estate company with 500 documents, monthly cost would be under $50."</td></tr>
+      <tr><td>"Why not just use Langchain?"</td><td>"LangChain treats all PDFs as flat text and loses table structure. Our custom pipeline extracts structured metadata like bedrooms and price from specific document types, enabling hybrid search that combines metadata filtering with vector similarity. A query like '3-bedroom homes under $600K' actually filters on the number 3, not just hoping the embedding captures it."</td></tr>
+      <tr><td>"What about CI/CD?"</td><td>"Cloud Build triggers on git push to automatically rebuild and redeploy the Cloud Run service. I can set up a staging environment with a separate Cloud Run service pointing to the same Firestore."</td></tr>
+    </table>
+  </div>
+</div>
+
+<hr>
+
+<!-- ============ ORDER OF EXECUTION ============ -->
+<div class="phase">
+  <div class="phase-header">
+    <div class="phase-num green">✓</div>
+    <div class="phase-title">Summary: Commands in Order</div>
+  </div>
+
+  <div class="step">
+    <h3>The complete sequence (copy-paste ready)</h3>
+    <pre><span class="comment"># === PHASE 1: Account Setup ===</span>
+<span class="cmd">gcloud auth login</span>
+<span class="cmd">gcloud projects create property-valuation-chatbot</span>
+<span class="cmd">gcloud config set project property-valuation-chatbot</span>
+<span class="cmd">gcloud billing accounts list</span>  <span class="comment"># find your billing account ID</span>
+<span class="cmd">gcloud billing projects link property-valuation-chatbot --billing-account=YOUR_BILLING_ID</span>
+
+<span class="comment"># === Enable APIs ===</span>
+<span class="cmd">gcloud services enable aiplatform.googleapis.com documentai.googleapis.com run.googleapis.com cloudbuild.googleapis.com storage.googleapis.com secretmanager.googleapis.com firestore.googleapis.com artifactregistry.googleapis.com</span>
+
+<span class="comment"># === PHASE 2: Storage ===</span>
+<span class="cmd">gcloud storage buckets create gs://pvr-chatbot-ganesh --location=us-central1 --uniform-bucket-level-access</span>
+
+<span class="comment"># === PHASE 3: Document AI ===</span>
+<span class="comment"># Do this in the web console: https://console.cloud.google.com/ai/document-ai</span>
+<span class="comment"># Create a "Document OCR" processor, note the ID</span>
+
+<span class="comment"># === PHASE 4: Service Account ===</span>
+<span class="cmd">gcloud iam service-accounts create pvr-chatbot-sa --display-name="Property Valuation Chatbot"</span>
+<span class="cmd">PROJECT_ID=$(gcloud config get-value project)</span>
+<span class="cmd">for role in roles/aiplatform.user roles/documentai.editor roles/storage.objectViewer roles/datastore.user; do
+  gcloud projects add-iam-policy-binding $PROJECT_ID --member="serviceAccount:pvr-chatbot-sa@$PROJECT_ID.iam.gserviceaccount.com" --role="$role"
+done</span>
+
+<span class="comment"># === PHASE 5: Code Updates ===</span>
+<span class="comment"># Update config.py: USE_VERTEX_AI=True, USE_GEMINI=True</span>
+<span class="comment"># Create Dockerfile and .dockerignore</span>
+
+<span class="comment"># === PHASE 6: Deploy ===</span>
+<span class="cmd">gcloud run deploy pvr-chatbot --source=. --region=us-central1 --service-account=pvr-chatbot-sa@$PROJECT_ID.iam.gserviceaccount.com --allow-unauthenticated --memory=2Gi --cpu=2 --timeout=300 --set-env-vars="GCP_PROJECT_ID=$PROJECT_ID,GCP_LOCATION=us-central1,USE_VERTEX_AI=true,USE_GEMINI=true"</span>
+
+<span class="comment"># === DONE! Open the URL Cloud Run gives you ===</span></pre>
+  </div>
+</div>
+
+<hr>
+
+<div style="background:#1e293b; border-radius:12px; padding:24px; border:2px solid #4285f4; margin-top:20px;">
+  <h3 style="color:#4285f4; margin-bottom:10px;">Before You Start: What You Need</h3>
+  <p style="color:#cbd5e1; font-size:0.92em;">
+    1. A Google account (Gmail works)<br>
+    2. A credit card for GCP verification (won't be charged with free tier)<br>
+    3. Mac terminal with Homebrew installed<br>
+    4. Your chatbot code (already done!)<br>
+    5. About 2-3 hours for the full setup
+  </p>
+  <p style="color:#94a3b8; font-size:0.88em; margin-top:10px;">
+    The actual code changes to make the chatbot work with GCP services (Document AI, Vertex AI, Firestore) will need to be written after you have the account set up. I can help you with those changes step by step once you have your GCP project ready.
+  </p>
+</div>
+
+</div>
+</body>
+</html>

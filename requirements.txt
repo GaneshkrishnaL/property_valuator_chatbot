@@ -1,0 +1,31 @@
+# Core PDF processing
+pymupdf>=1.23.0
+reportlab>=4.0.0
+fpdf2>=2.7.0
+
+# Vector database (ChromaDB is local fallback; Firestore is primary on GCP)
+chromadb>=0.4.0
+
+# Embeddings (local fallback)
+sentence-transformers>=2.2.0
+
+# Google Cloud (primary - requires GCP project)
+google-cloud-aiplatform>=1.38.0
+google-cloud-documentai>=2.20.0
+google-cloud-storage>=2.14.0
+google-cloud-firestore>=2.16.0
+
+# OpenAI (fallback LLM)
+openai>=1.0.0
+
+# Data models
+pydantic>=2.0.0
+
+# CLI formatting
+rich>=13.0.0
+
+# Web UI
+streamlit>=1.28.0
+
+# Utilities
+numpy>=1.24.0

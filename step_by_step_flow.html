@@ -1,0 +1,842 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RAG Pipeline - Step-by-Step Data Flow</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0a0e1a; color: #e2e8f0; }
+
+  .hero { background: linear-gradient(135deg, #1a1f36 0%, #0a0e1a 100%); border-bottom: 3px solid #3b82f6; padding: 40px; text-align: center; }
+  .hero h1 { font-size: 2em; color: #f8fafc; margin-bottom: 6px; }
+  .hero p { color: #94a3b8; font-size: 1.05em; }
+
+  .tabs { display: flex; justify-content: center; gap: 0; margin: 30px auto 0; max-width: 600px; }
+  .tab {
+    flex: 1; padding: 14px 20px; text-align: center; cursor: pointer;
+    background: #1e293b; border: 2px solid #334155; font-weight: 700; font-size: 0.95em;
+    transition: all 0.2s;
+  }
+  .tab:first-child { border-radius: 10px 0 0 10px; }
+  .tab:last-child { border-radius: 0 10px 10px 0; }
+  .tab.active { background: #3b82f6; border-color: #3b82f6; color: #fff; }
+  .tab:hover:not(.active) { background: #334155; }
+
+  .container { max-width: 1050px; margin: 0 auto; padding: 30px 20px; }
+
+  .flow-hidden { display: none; }
+
+  /* Step card */
+  .step {
+    position: relative; margin-bottom: 10px;
+    border-left: 3px solid #334155; padding-left: 30px; margin-left: 16px;
+  }
+  .step::before {
+    content: attr(data-num);
+    position: absolute; left: -16px; top: 0;
+    width: 32px; height: 32px; border-radius: 50%;
+    background: #3b82f6; color: #fff; font-weight: 800; font-size: 0.85em;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .step.green::before { background: #22c55e; }
+  .step.purple::before { background: #a855f7; }
+  .step.orange::before { background: #f97316; }
+  .step.pink::before { background: #ec4899; }
+  .step.yellow::before { background: #eab308; color: #0a0e1a; }
+
+  .step-header {
+    display: flex; align-items: center; gap: 12px; cursor: pointer;
+    padding: 14px 18px; background: #1e293b; border-radius: 10px;
+    border: 1px solid #334155; transition: all 0.2s;
+  }
+  .step-header:hover { border-color: #3b82f6; }
+  .step-header.open { border-radius: 10px 10px 0 0; border-bottom: none; }
+
+  .step-title { font-weight: 700; font-size: 1.05em; color: #f8fafc; flex: 1; }
+  .step-file { font-family: monospace; font-size: 0.8em; color: #60a5fa; background: #0f172a; padding: 3px 8px; border-radius: 4px; }
+  .step-arrow { font-size: 1.2em; color: #60a5fa; transition: transform 0.2s; }
+  .step-arrow.open { transform: rotate(90deg); }
+
+  .step-body {
+    background: #151b2e; border: 1px solid #334155; border-top: none;
+    border-radius: 0 0 10px 10px; padding: 0;
+    max-height: 0; overflow: hidden; transition: max-height 0.4s ease;
+  }
+  .step-body.open { max-height: 3000px; padding: 20px; }
+
+  .step-connector {
+    width: 3px; height: 20px; background: #334155; margin-left: 16px;
+  }
+
+  /* Data display */
+  .data-label {
+    font-size: 0.75em; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 1px; margin-bottom: 6px; margin-top: 14px;
+  }
+  .data-label:first-child { margin-top: 0; }
+  .label-input { color: #f97316; }
+  .label-process { color: #60a5fa; }
+  .label-output { color: #22c55e; }
+  .label-key { color: #ec4899; }
+
+  .data-box {
+    background: #0a0e1a; border: 1px solid #1e293b; border-radius: 8px;
+    padding: 14px 16px; font-size: 0.88em; line-height: 1.65;
+    overflow-x: auto; margin-bottom: 8px;
+  }
+  .data-box code { color: #60a5fa; }
+  .data-box .hl { color: #22c55e; font-weight: 600; }
+  .data-box .dim { color: #64748b; }
+  .data-box .warn { color: #f97316; }
+  .data-box .pink { color: #ec4899; }
+  .data-box .purple { color: #a855f7; }
+  .data-box .yellow { color: #eab308; }
+
+  pre.code-block {
+    background: #0a0e1a; border: 1px solid #1e293b; border-radius: 8px;
+    padding: 14px 16px; font-size: 0.82em; line-height: 1.55;
+    overflow-x: auto; margin: 8px 0; color: #cbd5e1;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+  }
+  pre.code-block .kw { color: #c084fc; }
+  pre.code-block .fn { color: #60a5fa; }
+  pre.code-block .str { color: #86efac; }
+  pre.code-block .cm { color: #475569; }
+  pre.code-block .num { color: #fbbf24; }
+
+  .explain {
+    color: #94a3b8; font-size: 0.88em; line-height: 1.65;
+    margin: 10px 0;
+  }
+  .explain strong { color: #e2e8f0; }
+
+  .arrow-down {
+    text-align: center; font-size: 1.8em; color: #3b82f6;
+    margin: 6px 0; line-height: 1;
+  }
+
+  .section-divider {
+    text-align: center; margin: 40px 0 30px;
+    font-size: 1.4em; font-weight: 700; color: #f8fafc;
+  }
+  .section-divider span { color: #3b82f6; }
+
+  /* Example PDF visual */
+  .pdf-visual {
+    background: #fff; color: #1e293b; border-radius: 8px;
+    padding: 20px; font-family: 'Times New Roman', serif;
+    font-size: 0.85em; line-height: 1.5; max-width: 500px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+  }
+  .pdf-visual h3 { font-size: 1.1em; text-align: center; margin-bottom: 8px; color: #0f172a; }
+  .pdf-visual .pdf-subtitle { text-align: center; color: #666; font-size: 0.9em; margin-bottom: 12px; }
+  .pdf-visual table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 0.85em; }
+  .pdf-visual th { background: #f1f5f9; border: 1px solid #cbd5e1; padding: 4px 8px; text-align: left; }
+  .pdf-visual td { border: 1px solid #cbd5e1; padding: 4px 8px; }
+  .pdf-visual .section-hdr { font-weight: 700; margin-top: 10px; color: #0f172a; }
+  .pdf-visual .footer { color: #999; font-size: 0.75em; text-align: center; margin-top: 10px; border-top: 1px solid #e2e8f0; padding-top: 6px; }
+
+  .insight-box {
+    background: #1a1f36; border-left: 4px solid #ec4899;
+    padding: 12px 16px; border-radius: 0 8px 8px 0; margin: 12px 0;
+    font-size: 0.88em; color: #cbd5e1;
+  }
+  .insight-box strong { color: #ec4899; }
+
+  @media (max-width: 700px) {
+    .container { padding: 20px 10px; }
+    .step { padding-left: 20px; }
+    .pdf-visual { max-width: 100%; }
+  }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <h1>RAG Pipeline: Step-by-Step Data Flow</h1>
+  <p>Follow ONE example PDF and ONE example query through every step</p>
+</div>
+
+<div class="container">
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab('ingest')">INGESTION FLOW</div>
+    <div class="tab" onclick="switchTab('query')">QUERY FLOW</div>
+  </div>
+</div>
+
+<!-- ==================== INGESTION FLOW ==================== -->
+<div class="container" id="ingest-flow">
+
+  <div class="section-divider">Ingestion Flow: <span>appraisal_742_evergreen.pdf</span></div>
+
+  <p class="explain" style="text-align:center; margin-bottom: 30px;">
+    We'll follow ONE PDF - the appraisal report for 742 Evergreen Terrace - through every step of the ingestion pipeline, showing you exactly what the data looks like at each stage.
+  </p>
+
+  <!-- STEP 1: PDF Generation -->
+  <div class="step green" data-num="1">
+    <div class="step-header" onclick="toggleStep(this)">
+      <span class="step-title">Generate the PDF</span>
+      <span class="step-file">generate_sample_pdfs.py</span>
+      <span class="step-arrow">&#9654;</span>
+    </div>
+    <div class="step-body">
+      <div class="data-label label-input">INPUT: Property data from Python dictionary</div>
+      <pre class="code-block">{
+    <span class="str">"address"</span>: <span class="str">"742 Evergreen Terrace, Austin, TX 78701"</span>,
+    <span class="str">"sqft"</span>: <span class="num">2450</span>,
+    <span class="str">"bedrooms"</span>: <span class="num">4</span>,
+    <span class="str">"bathrooms"</span>: <span class="num">3</span>,
+    <span class="str">"lot_size"</span>: <span class="str">"0.28 acres"</span>,
+    <span class="str">"year_built"</span>: <span class="num">2018</span>,
+    <span class="str">"assessed_value"</span>: <span class="num">525000</span>,
+    <span class="str">"listing_price"</span>: <span class="num">549900</span>,
+    <span class="str">"neighborhood"</span>: <span class="str">"Downtown Austin"</span>
+}</pre>
+
+      <div class="data-label label-process">WHAT HAPPENS: fpdf2 generates a multi-page PDF</div>
+      <p class="explain">The <code>generate_appraisal()</code> function creates a 3-page PDF with mixed content: narrative paragraphs about the property, a comparable sales TABLE with 4 rows of data, and a "Valuation Conclusion" section with the final estimated value. Headers ("CONFIDENTIAL") and footers ("Page 1 | Generated by...") are deliberately added to make it realistic.</p>
+
+      <div class="data-label label-output">OUTPUT: The actual PDF document</div>
+      <div class="pdf-visual">
+        <div class="footer" style="margin-top:0; border-top:none; border-bottom:1px solid #e2e8f0; padding-bottom:6px; margin-bottom:10px;">CONFIDENTIAL - Property Appraisal Report</div>
+        <h3>Appraisal Report</h3>
+        <div class="pdf-subtitle">742 Evergreen Terrace, Austin, TX 78701</div>
+        <div class="section-hdr">Property Information</div>
+        <p>The subject property located at 742 Evergreen Terrace is a 4 bedroom, 3 bathroom single-family home built in 2018. Total living area: 2,450 square feet on a 0.28 acres lot in the Downtown Austin neighborhood.</p>
+        <div class="section-hdr">Comparable Sales Analysis</div>
+        <table>
+          <tr><th>Address</th><th>Sale Price</th><th>Sq Ft</th><th>$/Sq Ft</th></tr>
+          <tr><td>750 Elm St</td><td>$535,000</td><td>2,380</td><td>$225</td></tr>
+          <tr><td>801 Oak Ave</td><td>$612,000</td><td>3,100</td><td>$197</td></tr>
+          <tr><td>723 Pine Rd</td><td>$498,000</td><td>2,200</td><td>$226</td></tr>
+        </table>
+        <div class="section-hdr">Valuation Conclusion</div>
+        <p>Based on the comparable sales analysis and property condition assessment, the estimated market value of 742 Evergreen Terrace is <strong>$525,000</strong>.</p>
+        <div class="footer">Page 1 | Generated by Austin Appraisal Services</div>
+      </div>
+
+      <div class="insight-box" style="margin-top: 16px;">
+        <strong>Why this matters:</strong> Notice how this PDF has TEXT (paragraphs), TABLES (comparable sales), AND noise (headers/footers). Standard RAG tools would dump this all as one flat string, losing the table structure completely. That's the problem we're solving.
+      </div>
+    </div>
+  </div>
+
+  <div class="arrow-down">&darr;</div>
+
+  <!-- STEP 2: PDF Extraction -->
+  <div class="step" data-num="2">
+    <div class="step-header" onclick="toggleStep(this)">
+      <span class="step-title">Extract Text + Tables from PDF</span>
+      <span class="step-file">pdf_extractor.py</span>
+      <span class="step-arrow">&#9654;</span>
+    </div>
+    <div class="step-body">
+      <div class="data-label label-input">INPUT: The raw PDF file (bytes on disk)</div>
+      <p class="explain">PyMuPDF (fitz) opens the PDF and processes each page separately.</p>
+
+      <div class="data-label label-process">WHAT HAPPENS - 3 things</div>
+      <p class="explain">
+        <strong>1. Text extraction:</strong> <code>page.get_text("text")</code> pulls all text from each page.<br>
+        <strong>2. Header/footer filtering:</strong> Lines containing "CONFIDENTIAL", "Page X |", or "Generated by" are removed. Without this, every chunk would contain "CONFIDENTIAL" and the search index would be polluted.<br>
+        <strong>3. Table detection:</strong> <code>page.find_tables()</code> detects tables and extracts them as structured lists of rows, preserving the column layout.
+      </p>
+
+      <div class="data-label label-output">OUTPUT: ExtractedDocument object</div>
+      <div class="data-box">
+        <code>ExtractedDocument</code> {<br>
+        &nbsp;&nbsp;<span class="dim">filename:</span> <span class="hl">"appraisal_742_evergreen.pdf"</span><br>
+        &nbsp;&nbsp;<span class="dim">page_count:</span> <span class="hl">3</span><br>
+        &nbsp;&nbsp;<span class="dim">pages:</span> [<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;<code>ExtractedPage</code> {<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="dim">text:</span> "Appraisal Report\n742 Evergreen Terrace...\nThe subject property located at 742 Evergreen Terrace is a 4 bedroom, 3 bathroom single-family home built in 2018..."<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="dim">tables:</span> [<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;[<span class="yellow">["Address", "Sale Price", "Sq Ft", "$/Sq Ft"]</span>,&nbsp;&nbsp;<span class="dim">// header row</span><br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;["750 Elm St", "$535,000", "2,380", "$225"],&nbsp;&nbsp;<span class="dim">// data row 1</span><br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;["801 Oak Ave", "$612,000", "3,100", "$197"],<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;["723 Pine Rd", "$498,000", "2,200", "$226"]]<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;]<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="dim">has_tables:</span> <span class="hl">true</span><br>
+        &nbsp;&nbsp;&nbsp;&nbsp;}<br>
+        &nbsp;&nbsp;]<br>
+        &nbsp;&nbsp;<span class="dim">full_text:</span> "Appraisal Report\n742 Evergreen Terrace..." <span class="dim">(all pages joined)</span><br>
+        &nbsp;&nbsp;<span class="dim">metadata:</span> {<span class="dim">filename</span>: "appraisal_742_evergreen.pdf", <span class="dim">pages</span>: 3}<br>
+        }
+      </div>
+
+      <div class="insight-box">
+        <strong>Key insight:</strong> Notice that the tables are extracted as STRUCTURED DATA (list of lists), NOT as flat text. The header row tells us what each column means. This is why the next step (parsing) can extract "$535,000" as a sale_price rather than just a random number.
+      </div>
+    </div>
+  </div>
+
+  <div class="arrow-down">&darr;</div>
+
+  <!-- STEP 3: Classification -->
+  <div class="step" data-num="3">
+    <div class="step-header" onclick="toggleStep(this)">
+      <span class="step-title">Classify Document Type</span>
+      <span class="step-file">document_classifier.py</span>
+      <span class="step-arrow">&#9654;</span>
+    </div>
+    <div class="step-body">
+      <div class="data-label label-input">INPUT: The ExtractedDocument.full_text</div>
+      <p class="explain">The classifier scans the full text looking for keyword patterns specific to each document type.</p>
+
+      <div class="data-label label-process">WHAT HAPPENS - Pattern scoring</div>
+      <div class="data-box">
+        <span class="dim">Scanning text for APPRAISAL signals:</span><br>
+        &nbsp;&nbsp;<span class="hl">MATCH</span> "appraisal report" &rarr; <span class="yellow">+0.35</span><br>
+        &nbsp;&nbsp;<span class="hl">MATCH</span> "appraiser" &rarr; <span class="yellow">+0.20</span><br>
+        &nbsp;&nbsp;<span class="hl">MATCH</span> "assessed value" &rarr; <span class="yellow">+0.15</span><br>
+        &nbsp;&nbsp;<span class="hl">MATCH</span> "valuation conclusion" &rarr; <span class="yellow">+0.20</span><br>
+        &nbsp;&nbsp;<span class="hl">MATCH</span> "subject property" &rarr; <span class="yellow">+0.10</span><br>
+        &nbsp;&nbsp;<span class="dim">Structural bonus (3 pages, has tables)</span> &rarr; <span class="yellow">+0.05</span><br>
+        &nbsp;&nbsp;<span class="purple">TOTAL: 1.05</span> &rarr; capped at <span class="purple">1.0</span><br><br>
+        <span class="dim">Scanning text for LISTING signals:</span><br>
+        &nbsp;&nbsp;<span class="warn">no match</span> "property listing"<br>
+        &nbsp;&nbsp;<span class="warn">no match</span> "mls#"<br>
+        &nbsp;&nbsp;<span class="purple">TOTAL: 0.10</span> <span class="dim">(only "list price" partial match)</span><br><br>
+        <span class="dim">Winner:</span> <span class="hl">APPRAISAL</span> with confidence <span class="hl">1.0</span>
+      </div>
+
+      <div class="data-label label-output">OUTPUT: ClassificationResult</div>
+      <div class="data-box">
+        <code>ClassificationResult</code> {<br>
+        &nbsp;&nbsp;<span class="dim">document_type:</span> <span class="hl">DocumentType.APPRAISAL</span><br>
+        &nbsp;&nbsp;<span class="dim">confidence:</span> <span class="hl">1.0</span><br>
+        &nbsp;&nbsp;<span class="dim">reasoning:</span> "Classified as APPRAISAL based on 5 keyword signals: appraisal\\s+report, appraiser, assessed\\s+value. Score: 1.00"<br>
+        }
+      </div>
+
+      <div class="insight-box">
+        <strong>Why this matters:</strong> Because we now know it's an APPRAISAL, we'll use the <code>AppraisalParser</code> in the next step. If we'd classified it as a LISTING, we'd use the <code>ListingParser</code> which looks for completely different fields (MLS#, days on market, etc.).
+      </div>
+    </div>
+  </div>
+
+  <div class="arrow-down">&darr;</div>
+
+  <!-- STEP 4: Custom Parsing -->
+  <div class="step purple" data-num="4">
+    <div class="step-header" onclick="toggleStep(this)">
+      <span class="step-title">Parse Structured Fields (AppraisalParser)</span>
+      <span class="step-file">custom_parsers.py</span>
+      <span class="step-arrow">&#9654;</span>
+    </div>
+    <div class="step-body">
+      <div class="data-label label-input">INPUT: ExtractedDocument (text + tables from Step 2)</div>
+      <p class="explain">The AppraisalParser runs regex patterns to extract specific fields AND iterates through the extracted tables to pull out comparable sales data.</p>
+
+      <div class="data-label label-process">WHAT HAPPENS - Two parallel extractions</div>
+      <p class="explain">
+        <strong>Regex extraction from text:</strong> Patterns like <code>r"(\d+)\s*bedroom"</code> find "4 bedroom" and extract the number 4. <code>r"estimated\s+market\s+value.*?\$?([\d,]+)"</code> finds "estimated market value of $525,000" and extracts 525000.<br><br>
+        <strong>Table extraction:</strong> The parser looks at the extracted tables from Step 2. It finds the table whose headers contain "price" and "address" and iterates through each row, mapping columns to fields: Address column &rarr; comp address, Sale Price column &rarr; sale_price, etc.<br><br>
+        <strong>Section splitting:</strong> Splits the text into sections (Introduction, Property Information, Valuation Conclusion) based on ALL-CAPS headers. Each section becomes a separate text unit for chunking.
+      </p>
+
+      <div class="data-label label-output">OUTPUT: Parsed data with structured_fields + text_sections</div>
+      <div class="data-box">
+        {<br>
+        &nbsp;&nbsp;<span class="purple">"structured_fields"</span>: {<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;<span class="dim">document_type:</span> <span class="str">"APPRAISAL"</span>,<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;<span class="dim">property_address:</span> <span class="hl">"742 Evergreen Terrace, Austin, TX 78701"</span>,<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;<span class="dim">bedrooms:</span> <span class="yellow">4</span>,<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;<span class="dim">bathrooms:</span> <span class="yellow">3</span>,<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;<span class="dim">square_footage:</span> <span class="yellow">2450</span>,<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;<span class="dim">year_built:</span> <span class="yellow">2018</span>,<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;<span class="dim">assessed_value:</span> <span class="yellow">525000</span>,<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;<span class="dim">neighborhood:</span> <span class="str">"Downtown Austin"</span>,<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;<span class="dim">comparable_sales:</span> [<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{address: "750 Elm St", sale_price: "$535,000", sqft: "2,380"},<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{address: "801 Oak Ave", sale_price: "$612,000", sqft: "3,100"},<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{address: "723 Pine Rd", sale_price: "$498,000", sqft: "2,200"}<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;]<br>
+        &nbsp;&nbsp;},<br>
+        &nbsp;&nbsp;<span class="purple">"text_sections"</span>: [<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;{<span class="dim">title:</span> <span class="str">"Introduction"</span>, <span class="dim">text:</span> "Appraisal Report\n742 Evergreen Terrace..."},<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;{<span class="dim">title:</span> <span class="str">"Property Information"</span>, <span class="dim">text:</span> "The subject property located at..."},<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;{<span class="dim">title:</span> <span class="str">"Valuation Conclusion"</span>, <span class="dim">text:</span> "Based on the comparable sales analysis..."}<br>
+        &nbsp;&nbsp;]<br>
+        }
+      </div>
+
+      <div class="insight-box">
+        <strong>This is the magic step.</strong> We've turned an unstructured PDF into structured data. The number "4" isn't just text anymore. It's <code>bedrooms: 4</code> as metadata. Later, when someone asks "3-bedroom homes under $600K", we can filter on <code>bedrooms != 3</code> and EXCLUDE this property instantly, without even checking the text.
+      </div>
+    </div>
+  </div>
+
+  <div class="arrow-down">&darr;</div>
+
+  <!-- STEP 5: Chunking -->
+  <div class="step purple" data-num="5">
+    <div class="step-header" onclick="toggleStep(this)">
+      <span class="step-title">Chunk into Searchable Pieces</span>
+      <span class="step-file">chunker.py</span>
+      <span class="step-arrow">&#9654;</span>
+    </div>
+    <div class="step-body">
+      <div class="data-label label-input">INPUT: Parsed data from Step 4 (structured_fields + text_sections)</div>
+      <p class="explain">Each text_section becomes one or more chunks. The structured_fields become metadata attached to EVERY chunk from this document.</p>
+
+      <div class="data-label label-process">WHAT HAPPENS</div>
+      <p class="explain">
+        <strong>Section &rarr; Chunk mapping:</strong> "Introduction" section (short) &rarr; 1 chunk. "Property Information" section (short) &rarr; 1 chunk. "Valuation Conclusion" section (short) &rarr; 1 chunk.<br><br>
+        <strong>Structured summary chunk:</strong> An extra chunk is created from the structured fields as readable text: "Property Summary:\nProperty Address: 742 Evergreen Terrace...\nBedrooms: 4\nAssessed Value: $525,000..."<br><br>
+        <strong>Metadata attachment:</strong> Every chunk gets the same metadata: bedrooms=4, price=525000, neighborhood="Downtown Austin", etc.
+      </p>
+
+      <div class="data-label label-output">OUTPUT: 4 DocumentChunks (3 sections + 1 summary)</div>
+      <div class="data-box">
+        <span class="purple">Chunk 1</span> <span class="dim">(section: Introduction)</span><br>
+        <span class="dim">text:</span> "[Introduction]\nAppraisal Report\n742 Evergreen Terrace, Austin, TX..."<br>
+        <span class="dim">metadata:</span> {<span class="hl">bedrooms: 4</span>, <span class="hl">price: 525000</span>, <span class="hl">neighborhood: "Downtown Austin"</span>, document_type: "APPRAISAL", property_address: "742 Evergreen Terrace..."}<br><br>
+
+        <span class="purple">Chunk 2</span> <span class="dim">(section: Property Information)</span><br>
+        <span class="dim">text:</span> "[Property Information]\nThe subject property located at 742 Evergreen Terrace is a 4 bedroom, 3 bathroom..."<br>
+        <span class="dim">metadata:</span> {<span class="hl">bedrooms: 4</span>, <span class="hl">price: 525000</span>, <span class="hl">neighborhood: "Downtown Austin"</span>, ...same as above}<br><br>
+
+        <span class="purple">Chunk 3</span> <span class="dim">(section: Valuation Conclusion)</span><br>
+        <span class="dim">text:</span> "[Valuation Conclusion]\nBased on the comparable sales analysis and property condition assessment, the estimated market value of 742 Evergreen Terrace is $525,000..."<br>
+        <span class="dim">metadata:</span> {same}<br><br>
+
+        <span class="purple">Chunk 4</span> <span class="dim">(section: Property Summary - auto-generated)</span><br>
+        <span class="dim">text:</span> "Property Summary:\nProperty Address: 742 Evergreen Terrace, Austin, TX 78701\nAssessed Value: $525,000\nSquare Footage: 2,450\nBedrooms: 4\nBathrooms: 3\nYear Built: 2018\nNeighborhood: Downtown Austin"<br>
+        <span class="dim">metadata:</span> {same}
+      </div>
+
+      <div class="insight-box">
+        <strong>Two levels of search:</strong> The <strong>text</strong> is what gets embedded and matched semantically (meaning). The <strong>metadata</strong> is what gets filtered exactly (numbers). When you search, metadata filters first, THEN vector similarity runs on the remaining chunks.
+      </div>
+    </div>
+  </div>
+
+  <div class="arrow-down">&darr;</div>
+
+  <!-- STEP 6: Embedding -->
+  <div class="step" data-num="6">
+    <div class="step-header" onclick="toggleStep(this)">
+      <span class="step-title">Embed Text into Vectors</span>
+      <span class="step-file">embeddings.py</span>
+      <span class="step-arrow">&#9654;</span>
+    </div>
+    <div class="step-body">
+      <div class="data-label label-input">INPUT: The .text field of each DocumentChunk</div>
+      <p class="explain">Each chunk's text gets converted into a 384-dimensional vector (array of 384 numbers) by the sentence-transformers model.</p>
+
+      <div class="data-label label-process">WHAT HAPPENS</div>
+      <p class="explain">The model <code>all-MiniLM-L6-v2</code> reads the text and produces a vector that captures the MEANING. Similar texts produce similar vectors. "Property valued at $525K" and "What is this home worth?" would produce vectors that are close together in 384-dimensional space, even though the words are different.</p>
+
+      <div class="data-label label-output">OUTPUT: Vector for each chunk</div>
+      <div class="data-box">
+        <span class="purple">Chunk 1 text:</span> "[Introduction]\nAppraisal Report\n742 Evergreen..."<br>
+        <span class="hl">Chunk 1 vector:</span> [0.023, -0.118, 0.445, 0.087, -0.234, ..., 0.067] <span class="dim">(384 numbers)</span><br><br>
+        <span class="purple">Chunk 3 text:</span> "[Valuation Conclusion]\n...estimated market value...is $525,000..."<br>
+        <span class="hl">Chunk 3 vector:</span> [0.156, -0.042, 0.312, 0.198, -0.089, ..., 0.145] <span class="dim">(384 numbers)</span>
+      </div>
+
+      <div class="insight-box">
+        <strong>Why vectors?</strong> You can't mathematically compare "What's this house worth?" with "estimated market value of $525,000" using keyword matching. But as vectors, you compute the cosine similarity (dot product) and get a number: 0.82 = very similar. That's how semantic search works.
+      </div>
+    </div>
+  </div>
+
+  <div class="arrow-down">&darr;</div>
+
+  <!-- STEP 7: Store -->
+  <div class="step green" data-num="7">
+    <div class="step-header" onclick="toggleStep(this)">
+      <span class="step-title">Store in ChromaDB</span>
+      <span class="step-file">vector_store.py</span>
+      <span class="step-arrow">&#9654;</span>
+    </div>
+    <div class="step-body">
+      <div class="data-label label-input">INPUT: Vectors + text + metadata for all 4 chunks</div>
+      <p class="explain">ChromaDB stores each chunk with three things: the vector (for similarity search), the raw text (to return as context), and the metadata (for filtering).</p>
+
+      <div class="data-label label-process">WHAT HAPPENS</div>
+      <p class="explain">ChromaDB's <code>add()</code> method stores everything on disk. When you later call <code>search()</code>, it can first filter by metadata (e.g., bedrooms=4) and then find the closest vectors in the filtered subset. This is much faster than searching all chunks.</p>
+
+      <div class="data-label label-output">OUTPUT: Chunks stored on disk, ready to search</div>
+      <div class="data-box">
+        <span class="hl">ChromaDB collection: "property_docs"</span><br>
+        &nbsp;&nbsp;Total chunks stored: <span class="yellow">~45</span> <span class="dim">(4 from this PDF + ~41 from other 10 PDFs)</span><br>
+        &nbsp;&nbsp;Each chunk has: <span class="hl">vector</span> (384-dim) + <span class="hl">text</span> + <span class="hl">metadata</span> (bedrooms, price, neighborhood...)<br><br>
+        <span class="dim">Now the ingestion is DONE. All 11 PDFs have been processed and stored.</span><br>
+        <span class="dim">Time taken: ~6-10 seconds total.</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ==================== QUERY FLOW ==================== -->
+<div class="container flow-hidden" id="query-flow">
+
+  <div class="section-divider">Query Flow: <span>"What is the estimated value of 742 Evergreen Terrace?"</span></div>
+
+  <p class="explain" style="text-align:center; margin-bottom: 30px;">
+    We'll follow this one query through the entire Retrieval &rarr; Augmentation &rarr; Generation pipeline, showing you exactly what happens at each step.
+  </p>
+
+  <!-- STEP 1: Query enters chatbot -->
+  <div class="step yellow" data-num="1">
+    <div class="step-header" onclick="toggleStep(this)">
+      <span class="step-title">Query Enters the Chatbot</span>
+      <span class="step-file">chatbot.py &rarr; ask()</span>
+      <span class="step-arrow">&#9654;</span>
+    </div>
+    <div class="step-body">
+      <div class="data-label label-input">INPUT: Raw user query string</div>
+      <div class="data-box">
+        <span class="hl">"What is the estimated value of 742 Evergreen Terrace?"</span>
+      </div>
+      <p class="explain">The <code>ask()</code> method receives this raw query. It does NOT add conversation history here. The raw query goes directly to the search system to avoid filter contamination (the bug we fixed).</p>
+    </div>
+  </div>
+
+  <div class="arrow-down">&darr;</div>
+
+  <!-- STEP 2: RETRIEVAL LAYER - Extract Filters -->
+  <div class="step" data-num="2">
+    <div class="step-header" onclick="toggleStep(this)">
+      <span class="step-title">RETRIEVAL: Extract Filters from Query</span>
+      <span class="step-file">search.py &rarr; extract_query_filters()</span>
+      <span class="step-arrow">&#9654;</span>
+    </div>
+    <div class="step-body">
+      <div class="data-label label-input">INPUT: The raw query string</div>
+      <p class="explain">Regex patterns scan the query looking for structured information: bedroom counts, price ranges, neighborhoods, and addresses.</p>
+
+      <div class="data-label label-process">WHAT HAPPENS - Regex pattern matching</div>
+      <div class="data-box">
+        <span class="dim">Checking for bedrooms:</span> <code>r"(\d+)\s*bed"</code> &rarr; <span class="warn">no match</span><br>
+        <span class="dim">Checking for price cap:</span> <code>r"under|below.*\$([\d,]+)"</code> &rarr; <span class="warn">no match</span><br>
+        <span class="dim">Checking for neighborhood:</span> "downtown austin", "south congress"... &rarr; <span class="warn">no match</span><br>
+        <span class="dim">Checking for address:</span> <code>r"(\d+\s+[\w\s]+terrace)"</code> &rarr; <span class="hl">MATCH: "742 evergreen terrace"</span><br>
+        <span class="dim">Checking for doc type:</span> "value" found &rarr; <span class="hl">MATCH: document_type = "APPRAISAL"</span>
+      </div>
+
+      <div class="data-label label-output">OUTPUT: QueryFilters</div>
+      <div class="data-box">
+        <code>QueryFilters</code> {<br>
+        &nbsp;&nbsp;<span class="dim">bedrooms:</span> None,<br>
+        &nbsp;&nbsp;<span class="dim">max_price:</span> None,<br>
+        &nbsp;&nbsp;<span class="dim">neighborhood:</span> None,<br>
+        &nbsp;&nbsp;<span class="dim">property_address:</span> <span class="hl">"742 evergreen terrace"</span>,<br>
+        &nbsp;&nbsp;<span class="dim">document_type:</span> <span class="hl">"APPRAISAL"</span><br>
+        }
+      </div>
+
+      <div class="insight-box">
+        <strong>Notice:</strong> The filter extraction found two things: a property address and a document type hint. It did NOT find bedrooms, price, or neighborhood filters. This means the metadata filter will narrow results to APPRAISAL documents only, and the reranker will boost results matching "742 evergreen terrace" in their address.
+      </div>
+    </div>
+  </div>
+
+  <div class="arrow-down">&darr;</div>
+
+  <!-- STEP 3: RETRIEVAL - Build Where Clause -->
+  <div class="step" data-num="3">
+    <div class="step-header" onclick="toggleStep(this)">
+      <span class="step-title">RETRIEVAL: Build ChromaDB Filter</span>
+      <span class="step-file">search.py &rarr; build_chroma_where()</span>
+      <span class="step-arrow">&#9654;</span>
+    </div>
+    <div class="step-body">
+      <div class="data-label label-input">INPUT: QueryFilters from Step 2</div>
+      <div class="data-label label-output">OUTPUT: ChromaDB where clause</div>
+      <div class="data-box">
+        <span class="dim">Only document_type filter is applied (address matching happens in reranking):</span><br><br>
+        <code>where</code> = {<span class="hl">"document_type": "APPRAISAL"</span>}<br><br>
+        <span class="dim">This tells ChromaDB: "only search within APPRAISAL chunks, ignore listings, market analysis, etc."</span><br>
+        <span class="dim">This narrows ~45 total chunks down to ~12 appraisal chunks.</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="arrow-down">&darr;</div>
+
+  <!-- STEP 4: RETRIEVAL - Vector Search -->
+  <div class="step purple" data-num="4">
+    <div class="step-header" onclick="toggleStep(this)">
+      <span class="step-title">RETRIEVAL: Embed Query + Vector Search</span>
+      <span class="step-file">embeddings.py + vector_store.py</span>
+      <span class="step-arrow">&#9654;</span>
+    </div>
+    <div class="step-body">
+      <div class="data-label label-process">STEP A: Embed the query</div>
+      <div class="data-box">
+        <span class="dim">Query:</span> "What is the estimated value of 742 Evergreen Terrace?"<br>
+        <span class="hl">Query vector:</span> [0.189, -0.067, 0.398, 0.112, ..., 0.203] <span class="dim">(384 numbers)</span>
+      </div>
+
+      <div class="data-label label-process">STEP B: Search ChromaDB (filtered to APPRAISAL chunks only)</div>
+      <p class="explain">ChromaDB computes the cosine similarity between the query vector and every APPRAISAL chunk's vector. Chunks about "valuation" and "742 Evergreen" score highest because their meanings are closest to the query.</p>
+
+      <div class="data-label label-output">OUTPUT: Top 10 raw results (before reranking)</div>
+      <div class="data-box">
+        <span class="dim">#1</span> score=<span class="hl">0.82</span> | <span class="purple">Chunk: Valuation Conclusion</span> | 742 Evergreen | "...estimated market value of $525,000..."<br>
+        <span class="dim">#2</span> score=<span class="hl">0.78</span> | <span class="purple">Chunk: Property Summary</span> | 742 Evergreen | "Property Address: 742 Evergreen...Assessed Value: $525,000..."<br>
+        <span class="dim">#3</span> score=<span class="yellow">0.71</span> | <span class="purple">Chunk: Property Information</span> | 742 Evergreen | "The subject property located at 742..."<br>
+        <span class="dim">#4</span> score=<span class="yellow">0.65</span> | <span class="purple">Chunk: Valuation Conclusion</span> | 1510 Maple Dr | "...estimated market value of $415,000..."<br>
+        <span class="dim">#5</span> score=<span class="yellow">0.62</span> | <span class="purple">Chunk: Property Summary</span> | 1510 Maple Dr | "Property Address: 1510 Maple..."<br>
+        <span class="dim">...and 5 more lower-scoring results</span>
+      </div>
+
+      <div class="insight-box">
+        <strong>Notice:</strong> The top 3 results are all about 742 Evergreen because the query mentioned that address AND the text content is about valuation. But results #4-5 are about a DIFFERENT property (1510 Maple) because their Valuation Conclusion text is semantically similar to the query. This is where reranking helps.
+      </div>
+    </div>
+  </div>
+
+  <div class="arrow-down">&darr;</div>
+
+  <!-- STEP 5: RETRIEVAL - Reranking -->
+  <div class="step purple" data-num="5">
+    <div class="step-header" onclick="toggleStep(this)">
+      <span class="step-title">RETRIEVAL: Rerank Results</span>
+      <span class="step-file">search.py &rarr; _rerank()</span>
+      <span class="step-arrow">&#9654;</span>
+    </div>
+    <div class="step-body">
+      <div class="data-label label-process">WHAT HAPPENS - Bonus scoring</div>
+      <div class="data-box">
+        <span class="dim">Result #1 (742 Evergreen - Valuation Conclusion):</span><br>
+        &nbsp;&nbsp;Base score: 0.82<br>
+        &nbsp;&nbsp;<span class="hl">+0.15</span> address match: "742 evergreen terrace" found in metadata<br>
+        &nbsp;&nbsp;<span class="hl">+0.05</span> document type match: APPRAISAL = APPRAISAL<br>
+        &nbsp;&nbsp;<span class="purple">Final: 1.0</span> <span class="dim">(capped at 1.0)</span><br><br>
+
+        <span class="dim">Result #4 (1510 Maple - Valuation Conclusion):</span><br>
+        &nbsp;&nbsp;Base score: 0.65<br>
+        &nbsp;&nbsp;<span class="warn">+0.00</span> address match: "742 evergreen" NOT in "1510 Maple"<br>
+        &nbsp;&nbsp;<span class="hl">+0.05</span> document type match: APPRAISAL = APPRAISAL<br>
+        &nbsp;&nbsp;<span class="purple">Final: 0.70</span><br>
+      </div>
+
+      <div class="data-label label-output">OUTPUT: Reranked results (742 Evergreen chunks all at the top)</div>
+      <div class="data-box">
+        <span class="hl">#1</span> score=<span class="hl">1.00</span> | 742 Evergreen | Valuation Conclusion<br>
+        <span class="hl">#2</span> score=<span class="hl">0.98</span> | 742 Evergreen | Property Summary<br>
+        <span class="hl">#3</span> score=<span class="hl">0.91</span> | 742 Evergreen | Property Information<br>
+        <span class="dim">#4</span> score=<span class="yellow">0.70</span> | 1510 Maple | Valuation Conclusion<br>
+        <span class="dim">#5</span> score=<span class="yellow">0.67</span> | 1510 Maple | Property Summary<br>
+        <span class="dim">(+ more below threshold)</span>
+      </div>
+
+      <div class="insight-box">
+        <strong>Result of retrieval layer:</strong> We have 5-10 relevant chunks, with the 742 Evergreen ones at the top. The 1510 Maple chunks are included as additional context (they're still above the 0.3 threshold). These results now get passed to the Augmentation layer.
+      </div>
+    </div>
+  </div>
+
+  <div class="arrow-down" style="font-size: 2.2em;">&darr;</div>
+  <div class="section-divider" style="margin:10px 0 20px; color:#f97316; font-size:1.1em;">RETRIEVAL &rarr; AUGMENTATION LAYER</div>
+
+  <!-- STEP 6: AUGMENTATION - Classify Query + Pick Template -->
+  <div class="step orange" data-num="6">
+    <div class="step-header" onclick="toggleStep(this)">
+      <span class="step-title">AUGMENTATION: Classify Query + Pick Template</span>
+      <span class="step-file">prompt_templates.py &rarr; classify_query()</span>
+      <span class="step-arrow">&#9654;</span>
+    </div>
+    <div class="step-body">
+      <div class="data-label label-input">INPUT: The original query string</div>
+      <div class="data-label label-process">WHAT HAPPENS - Keyword matching</div>
+      <div class="data-box">
+        <span class="dim">Query:</span> "What is the estimated <span class="hl">value</span> of 742 Evergreen Terrace?"<br><br>
+        <span class="dim">Checking VALUATION keywords:</span> "value", "worth", "price of", "appraisal"...<br>
+        &nbsp;&nbsp;<span class="hl">MATCH: "value"</span> &rarr; QueryType.VALUATION<br><br>
+        <span class="dim">Selected template:</span> <span class="hl">VALUATION_TEMPLATE</span><br>
+        <span class="dim">This template includes the critical instruction: "Look for explicitly stated values first. Do NOT compute your own estimate."</span>
+      </div>
+
+      <div class="insight-box">
+        <strong>Why separate templates?</strong> If this were a market trends question, we'd pick MARKET_ANALYSIS_TEMPLATE which tells the LLM to focus on statistics and trends. Different questions need different instructions. Without this, the LLM might give a market overview when you asked for a specific property value.
+      </div>
+    </div>
+  </div>
+
+  <div class="arrow-down">&darr;</div>
+
+  <!-- STEP 7: AUGMENTATION - Build the Full Prompt -->
+  <div class="step orange" data-num="7">
+    <div class="step-header" onclick="toggleStep(this)">
+      <span class="step-title">AUGMENTATION: Build the Full LLM Prompt</span>
+      <span class="step-file">prompt_templates.py &rarr; build_prompt()</span>
+      <span class="step-arrow">&#9654;</span>
+    </div>
+    <div class="step-body">
+      <div class="data-label label-process">WHAT HAPPENS - Assembling 3 pieces</div>
+      <p class="explain">The final prompt sent to GPT-4o-mini is assembled from three pieces: the system prompt (who you are + rules), the retrieved chunks formatted as context, and the user's question.</p>
+
+      <div class="data-label label-output">OUTPUT: System Prompt</div>
+      <div class="data-box" style="border-left: 3px solid #f97316;">
+        <span class="warn">SYSTEM PROMPT</span><br>
+        "You are a property valuation assistant for the Austin, Texas real estate market...<br><br>
+        CRITICAL RULES:<br>
+        1. ONLY use information from the provided context documents. Never use your general knowledge.<br>
+        2. ALWAYS cite which document each piece of information comes from [Source: filename].<br>
+        3. If context doesn't have enough info, say 'I don't have sufficient data...'<br>
+        4. Never invent or estimate property values unless data explicitly supports it.<br>
+        5. When discussing prices, specify whether it's assessed value, listing price, sale price..."
+      </div>
+
+      <div class="data-label label-output">OUTPUT: User Prompt (template + context + question)</div>
+      <div class="data-box" style="border-left: 3px solid #22c55e;">
+        <span class="hl">USER PROMPT</span><br>
+        "Based on the following property documents, answer the user's valuation question.<br><br>
+        <span class="warn">IMPORTANT: Look for explicitly stated values first...</span><br><br>
+        RETRIEVED CONTEXT:<br>
+        --- Document 1 [Source: appraisal_742_evergreen.pdf] (Type: APPRAISAL, Relevance: 1.00) ---<br>
+        [Valuation Conclusion] Based on the comparable sales analysis and property condition assessment, the estimated market value of 742 Evergreen Terrace is $525,000...<br><br>
+        --- Document 2 [Source: appraisal_742_evergreen.pdf] (Type: APPRAISAL, Relevance: 0.98) ---<br>
+        Property Summary: Property Address: 742 Evergreen Terrace...Assessed Value: $525,000...Bedrooms: 4...<br><br>
+        --- Document 3 [Source: appraisal_742_evergreen.pdf] (Type: APPRAISAL, Relevance: 0.91) ---<br>
+        [Property Information] The subject property located at 742 Evergreen Terrace is a 4 bedroom...<br><br>
+        <span class="dim">... (more documents) ...</span><br><br>
+        USER QUESTION: What is the estimated value of 742 Evergreen Terrace?"
+      </div>
+
+      <div class="insight-box">
+        <strong>This is "Augmentation" in RAG:</strong> We're "augmenting" the LLM's prompt with REAL RETRIEVED DATA. The LLM doesn't need to know anything about Austin real estate from its training. It just reads the documents we gave it and answers from those. That's why it can't hallucinate a value, the prompt explicitly says "look for stated values first."
+      </div>
+    </div>
+  </div>
+
+  <div class="arrow-down" style="font-size: 2.2em;">&darr;</div>
+  <div class="section-divider" style="margin:10px 0 20px; color:#ec4899; font-size:1.1em;">AUGMENTATION &rarr; GENERATION LAYER</div>
+
+  <!-- STEP 8: GENERATION - LLM Call -->
+  <div class="step pink" data-num="8">
+    <div class="step-header" onclick="toggleStep(this)">
+      <span class="step-title">GENERATION: LLM Generates Answer</span>
+      <span class="step-file">llm_client.py &rarr; generate()</span>
+      <span class="step-arrow">&#9654;</span>
+    </div>
+    <div class="step-body">
+      <div class="data-label label-input">INPUT: System prompt + User prompt from Step 7</div>
+      <p class="explain">The complete prompt is sent to OpenAI's GPT-4o-mini API (temperature=0.3 for factual accuracy). The model reads the retrieved documents in the context and generates a natural language answer.</p>
+
+      <div class="data-label label-output">OUTPUT: Raw LLM response</div>
+      <div class="data-box" style="border-left: 3px solid #ec4899; line-height: 1.8;">
+        <span class="pink">GPT-4o-mini response:</span><br><br>
+        "Based on the appraisal report for 742 Evergreen Terrace, Austin, TX 78701, the <strong style="color:#22c55e">estimated market value is $525,000</strong> [Source: appraisal_742_evergreen.pdf].<br><br>
+        This is a 4-bedroom, 3-bathroom single-family home built in 2018 with 2,450 square feet of living space on a 0.28-acre lot in the Downtown Austin neighborhood [Source: appraisal_742_evergreen.pdf].<br><br>
+        The valuation is supported by comparable sales in the area:<br>
+        - 750 Elm St: sold for $535,000 (2,380 sq ft, $225/sq ft)<br>
+        - 801 Oak Ave: sold for $612,000 (3,100 sq ft, $197/sq ft)<br>
+        - 723 Pine Rd: sold for $498,000 (2,200 sq ft, $226/sq ft)<br>
+        [Source: appraisal_742_evergreen.pdf]"
+      </div>
+
+      <div class="insight-box">
+        <strong>Notice:</strong> The LLM reported the stated value ($525,000) from the Valuation Conclusion section, NOT a computed estimate. It cited the source file. It included comparable sales data. All because the VALUATION_TEMPLATE instructed it to do exactly this.
+      </div>
+    </div>
+  </div>
+
+  <div class="arrow-down">&darr;</div>
+
+  <!-- STEP 9: Post-processing -->
+  <div class="step pink" data-num="9">
+    <div class="step-header" onclick="toggleStep(this)">
+      <span class="step-title">GENERATION: Verify Numbers + Assess Confidence</span>
+      <span class="step-file">chatbot.py &rarr; _verify_numbers()</span>
+      <span class="step-arrow">&#9654;</span>
+    </div>
+    <div class="step-body">
+      <div class="data-label label-process">NUMBER VERIFICATION</div>
+      <div class="data-box">
+        <span class="dim">Dollar amounts found in LLM response:</span><br>
+        &nbsp;&nbsp;$525,000, $535,000, $612,000, $498,000<br><br>
+        <span class="dim">Dollar amounts found in retrieved documents:</span><br>
+        &nbsp;&nbsp;$525,000, $535,000, $612,000, $498,000, $225, $197, $226<br><br>
+        <span class="dim">Checking each response amount against context:</span><br>
+        &nbsp;&nbsp;$525,000 in context? <span class="hl">YES</span><br>
+        &nbsp;&nbsp;$535,000 in context? <span class="hl">YES</span><br>
+        &nbsp;&nbsp;$612,000 in context? <span class="hl">YES</span><br>
+        &nbsp;&nbsp;$498,000 in context? <span class="hl">YES</span><br><br>
+        <span class="hl">All amounts verified. No hallucination detected.</span>
+      </div>
+
+      <div class="data-label label-process">CONFIDENCE ASSESSMENT</div>
+      <div class="data-box">
+        <span class="dim">Top result score:</span> 1.00 <span class="hl">(&gt; 0.7 threshold)</span><br>
+        <span class="dim">Average score:</span> 0.85 <span class="hl">(&gt; 0.5 threshold)</span><br>
+        <span class="dim">Answer contains "don't have sufficient data"?</span> No<br><br>
+        <span class="hl">Confidence: HIGH</span>
+      </div>
+
+      <div class="data-label label-output">OUTPUT: Final ChatResponse</div>
+      <div class="data-box" style="border-left: 3px solid #22c55e;">
+        <code>ChatResponse</code> {<br>
+        &nbsp;&nbsp;<span class="dim">answer:</span> "Based on the appraisal report for 742 Evergreen Terrace..."<br>
+        &nbsp;&nbsp;<span class="dim">query_type:</span> <span class="hl">"valuation"</span><br>
+        &nbsp;&nbsp;<span class="dim">sources:</span> [<span class="str">"appraisal_742_evergreen.pdf"</span>]<br>
+        &nbsp;&nbsp;<span class="dim">retrieved_documents:</span> [5 SearchResult objects]<br>
+        &nbsp;&nbsp;<span class="dim">confidence:</span> <span class="hl">"high"</span><br>
+        }
+      </div>
+    </div>
+  </div>
+
+  <div class="arrow-down">&darr;</div>
+
+  <!-- STEP 10: Display -->
+  <div class="step green" data-num="10">
+    <div class="step-header" onclick="toggleStep(this)">
+      <span class="step-title">Display to User</span>
+      <span class="step-file">cli_demo.py / streamlit_app.py</span>
+      <span class="step-arrow">&#9654;</span>
+    </div>
+    <div class="step-body">
+      <div class="data-label label-output">WHAT THE USER SEES</div>
+      <div class="data-box" style="background: #0f172a; border-color: #22c55e; border-width: 2px; padding: 20px;">
+        <span style="color: #22c55e; font-weight: 700;">QUERY 1:</span> What is the estimated value of 742 Evergreen Terrace?<br><br>
+        <span style="color: #60a5fa; font-weight: 700;">RETRIEVED:</span> 5 documents (top score: 1.00)<br>
+        <span style="color: #64748b;">Filters: document_type=APPRAISAL, address=742 evergreen terrace</span><br><br>
+        <span style="color: #f8fafc; font-weight: 700;">ANSWER</span> <span style="background: #22c55e22; color: #22c55e; padding: 2px 8px; border-radius: 4px; font-size: 0.8em;">HIGH CONFIDENCE</span><br><br>
+        Based on the appraisal report for 742 Evergreen Terrace, Austin, TX 78701, the estimated market value is <strong style="color: #22c55e;">$525,000</strong> [Source: appraisal_742_evergreen.pdf].<br><br>
+        This is a 4-bedroom, 3-bathroom single-family home built in 2018 with 2,450 square feet of living space on a 0.28-acre lot in the Downtown Austin neighborhood.<br><br>
+        The valuation is supported by comparable sales in the area:<br>
+        &nbsp;&nbsp;- 750 Elm St: sold for $535,000 (2,380 sq ft)<br>
+        &nbsp;&nbsp;- 801 Oak Ave: sold for $612,000 (3,100 sq ft)<br>
+        &nbsp;&nbsp;- 723 Pine Rd: sold for $498,000 (2,200 sq ft)<br><br>
+        <span style="color: #64748b;">Sources: appraisal_742_evergreen.pdf</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+function switchTab(tab) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('ingest-flow').classList.toggle('flow-hidden', tab !== 'ingest');
+  document.getElementById('query-flow').classList.toggle('flow-hidden', tab !== 'query');
+  event.target.classList.add('active');
+}
+
+function toggleStep(header) {
+  const body = header.nextElementSibling;
+  const arrow = header.querySelector('.step-arrow');
+  const isOpen = body.classList.contains('open');
+
+  body.classList.toggle('open');
+  header.classList.toggle('open');
+  arrow.classList.toggle('open');
+}
+
+// Open first step of each flow by default
+document.addEventListener('DOMContentLoaded', () => {
+  const firstStep = document.querySelector('#ingest-flow .step-header');
+  if (firstStep) toggleStep(firstStep);
+});
+</script>
+
+</body>
+</html>

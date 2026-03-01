@@ -1,0 +1,12 @@
+# Git Ignore
+venv/
+__pycache__/
+*.pyc
+.env
+key.json
+chroma_db/
+data/pdfs/
+.DS_Store
+.idea/
+.vscode/
+*.log
