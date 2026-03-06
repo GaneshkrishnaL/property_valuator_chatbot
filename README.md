@@ -1,5 +1,5 @@
 # Real Estate Property Valuation RAG Prototype
-................................................
+.................................................
 A production-quality Retrieval-Augmented Generation (RAG) prototype that solves a real business problem: **parsing proprietary real estate data trapped in unstructured PDF formats that standard RAG tools can't handle.**
 
 Built for the Google Cloud AI Practice, this prototype demonstrates a custom data-cleaning pipeline, hybrid search with metadata filtering, and hallucination-safe generation — the kind of solution a Customer Engineer would build for an enterprise real estate customer.
